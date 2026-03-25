@@ -56,6 +56,10 @@ export default function StudentTests() {
 
   async function handleComplete() {
     if (!activeTest) return
+    if (joinCode.trim().toUpperCase() !== activeTest.join_code) {
+      showToast('รหัสไม่ถูกต้อง ❌', 'error')
+      return
+    }
     setJoining(true)
     try {
       // Insert completion
@@ -82,6 +86,7 @@ export default function StudentTests() {
 
       showToast(`ได้รับ ${activeTest.points_reward} แต้ม! 🎉`, 'success')
       setActiveTest(null)
+      setJoinCode('')
       await refreshProfile()
       fetchData()
     } catch (err) {
@@ -171,7 +176,7 @@ export default function StudentTests() {
 
       {/* Confirm Modal */}
       {activeTest && (
-        <div className="modal-overlay" onClick={() => setActiveTest(null)}>
+        <div className="modal-overlay" onClick={() => { setActiveTest(null); setJoinCode('') }}>
           <div className="modal-sheet" onClick={e => e.stopPropagation()}>
             <div className="modal-handle" />
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
@@ -187,13 +192,26 @@ export default function StudentTests() {
               </strong>
             </div>
 
-            <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
-              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setActiveTest(null)}>ยกเลิก</button>
+            <div className="input-group" style={{ marginTop: 16 }}>
+              <label className="input-label">กรอกรหัสกิจกรรม</label>
+              <input
+                className="input"
+                placeholder="รหัสจากครู เช่น ABC123"
+                value={joinCode}
+                onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                maxLength={8}
+                style={{ fontFamily: 'Space Mono, monospace', letterSpacing: '0.15em', textAlign: 'center', fontSize: '1.2rem', fontWeight: 700 }}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => { setActiveTest(null); setJoinCode('') }}>ยกเลิก</button>
               <button
                 className="btn btn-gold"
                 style={{ flex: 2 }}
                 onClick={handleComplete}
-                disabled={joining}
+                disabled={joining || !joinCode.trim()}
               >
                 {joining ? <><span className="spinner" /> กำลังบันทึก...</> : '✅ ทำเสร็จแล้ว!'}
               </button>
