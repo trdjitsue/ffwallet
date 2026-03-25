@@ -4,17 +4,37 @@ import { supabase } from '../../lib/supabase'
 import BottomNav from '../../components/shared/BottomNav'
 
 export default function StudentDashboard() {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, refreshProfile } = useAuth()
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
-  const [animPoints, setAnimPoints] = useState(0)
+  const [displayPoints, setDisplayPoints] = useState(0)
 
   useEffect(() => {
-    if (profile) {
-      fetchTransactions()
-      animatePoints(profile.points)
-    }
+    if (!profile) return
+    fetchTransactions()
+    animatePoints(profile.points)
+
+    // Realtime: listen for new transactions for this student
+    const channel = supabase
+      .channel('student-points-' + profile.id)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'point_transactions',
+        filter: `student_id=eq.${profile.id}`,
+      }, async () => {
+        await refreshProfile()
+        fetchTransactions()
+      })
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
   }, [profile?.id])
+
+  // Animate whenever profile.points changes
+  useEffect(() => {
+    if (profile) animatePoints(profile.points)
+  }, [profile?.points])
 
   async function fetchTransactions() {
     const { data } = await supabase
@@ -28,13 +48,14 @@ export default function StudentDashboard() {
   }
 
   function animatePoints(target) {
-    const duration = 1200
+    const duration = 1000
     const startTime = performance.now()
+    const startVal = displayPoints
     function update(now) {
       const elapsed = now - startTime
       const progress = Math.min(elapsed / duration, 1)
       const eased = 1 - Math.pow(1 - progress, 3)
-      setAnimPoints(Math.round(eased * target))
+      setDisplayPoints(Math.round(startVal + eased * (target - startVal)))
       if (progress < 1) requestAnimationFrame(update)
     }
     requestAnimationFrame(update)
@@ -61,7 +82,7 @@ export default function StudentDashboard() {
         <div style={styles.orb1} />
         <div style={styles.orb2} />
         <div style={styles.scoreLabel}>แต้มของฉัน</div>
-        <div style={styles.scoreBig}>{animPoints.toLocaleString()}</div>
+        <div style={styles.scoreBig}>{displayPoints.toLocaleString()}</div>
         <div style={styles.scoreUnit}>คะแนน</div>
       </div>
 
@@ -137,7 +158,6 @@ const styles = {
     borderRadius: 24, padding: '40px 24px 36px',
     textAlign: 'center', position: 'relative', overflow: 'hidden',
     boxShadow: '0 12px 40px rgba(108,58,247,0.4)',
-    animation: 'scaleIn 0.4s ease',
   },
   orb1: {
     position: 'absolute', top: -40, right: -40, width: 150, height: 150, borderRadius: '50%',
@@ -157,13 +177,12 @@ const styles = {
     color: 'white', lineHeight: 1,
     textShadow: '0 4px 24px rgba(0,0,0,0.2)',
     letterSpacing: '-0.04em',
-    animation: 'pointBurst 0.5s ease forwards',
   },
   scoreUnit: {
     fontSize: '1.1rem', fontWeight: 600, color: 'rgba(255,255,255,0.6)',
     fontFamily: 'Sora, sans-serif', marginTop: 6,
   },
-  section: { padding: '16px', animation: 'fadeIn 0.4s ease 0.2s both' },
+  section: { padding: '16px' },
   sectionTitle: {
     fontFamily: 'Sora, sans-serif', fontWeight: 700,
     fontSize: '1rem', color: '#1A1A2E', marginBottom: 12,
