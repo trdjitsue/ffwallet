@@ -145,7 +145,6 @@ export default function StudentTests() {
                     {test.description && <div style={styles.testDesc}>{test.description}</div>}
                     <div style={styles.testMeta}>
                       <span style={styles.testTeacher}>👤 {test.teacher?.nickname}</span>
-                      <span style={styles.testCode}>🔑 {test.join_code}</span>
                     </div>
                   </div>
                   <div style={styles.testRight}>
