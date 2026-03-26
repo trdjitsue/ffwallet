@@ -6,17 +6,17 @@ export default function BottomNav({ role }) {
 
   const studentTabs = [
     { to: '/student', icon: '🏠', label: 'หน้าแรก' },
+    { to: '/student/courses', icon: '📚', label: 'คอร์ส' },
     { to: '/student/shop', icon: '🛍️', label: 'แลกของ' },
     { to: '/student/tests', icon: '📝', label: 'กิจกรรม' },
     { to: '/student/qr', icon: '📱', label: 'QR' },
-    { to: '/student/profile', icon: '🎨', label: 'Avatar' },
   ]
 
   const teacherTabs = [
     { to: '/teacher', icon: '🏠', label: 'หน้าแรก' },
+    { to: '/teacher/courses', icon: '📚', label: 'คอร์ส' },
     { to: '/teacher/assign', icon: '⭐', label: 'ให้แต้ม' },
     { to: '/teacher/ranking', icon: '🏆', label: 'อันดับ' },
-    { to: '/teacher/tests', icon: '📝', label: 'กิจกรรม' },
     { to: '/teacher/shop', icon: '🛍️', label: 'ของรางวัล' },
   ]
 
