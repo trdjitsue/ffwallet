@@ -16,6 +16,7 @@ import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import TeacherAssignPoints from './pages/teacher/TeacherAssignPoints'
 import TeacherTests from './pages/teacher/TeacherTests'
 import TeacherShop from './pages/teacher/TeacherShop'
+import TeacherRanking from './pages/teacher/TeacherRanking'
 
 // Admin
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -77,6 +78,7 @@ export default function App() {
           <Route path="/teacher/assign" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherAssignPoints /></ProtectedRoute>} />
           <Route path="/teacher/tests" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherTests /></ProtectedRoute>} />
           <Route path="/teacher/shop" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherShop /></ProtectedRoute>} />
+          <Route path="/teacher/ranking" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherRanking /></ProtectedRoute>} />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
