@@ -10,6 +10,7 @@ import StudentDashboard from './pages/student/StudentDashboard'
 import StudentShop from './pages/student/StudentShop'
 import StudentTests from './pages/student/StudentTests'
 import StudentQR from './pages/student/StudentQR'
+import StudentProfile from './pages/student/StudentProfile'
 
 // Teacher
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
@@ -72,6 +73,7 @@ export default function App() {
           <Route path="/student/shop" element={<ProtectedRoute roles={['student']}><StudentShop /></ProtectedRoute>} />
           <Route path="/student/tests" element={<ProtectedRoute roles={['student']}><StudentTests /></ProtectedRoute>} />
           <Route path="/student/qr" element={<ProtectedRoute roles={['student']}><StudentQR /></ProtectedRoute>} />
+          <Route path="/student/profile" element={<ProtectedRoute roles={['student']}><StudentProfile /></ProtectedRoute>} />
 
           {/* Teacher Routes */}
           <Route path="/teacher" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherDashboard /></ProtectedRoute>} />

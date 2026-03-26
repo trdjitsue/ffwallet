@@ -8,7 +8,8 @@ export default function BottomNav({ role }) {
     { to: '/student', icon: '🏠', label: 'หน้าแรก' },
     { to: '/student/shop', icon: '🛍️', label: 'แลกของ' },
     { to: '/student/tests', icon: '📝', label: 'กิจกรรม' },
-    { to: '/student/qr', icon: '📱', label: 'QR ของฉัน' },
+    { to: '/student/qr', icon: '📱', label: 'QR' },
+    { to: '/student/profile', icon: '🎨', label: 'Avatar' },
   ]
 
   const teacherTabs = [

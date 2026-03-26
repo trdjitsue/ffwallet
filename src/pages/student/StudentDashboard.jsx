@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import BottomNav from '../../components/shared/BottomNav'
+import { AvatarSVG, DEFAULT_AVATAR } from '../../components/shared/AvatarBuilder'
 
 export default function StudentDashboard() {
   const { profile, signOut, refreshProfile } = useAuth()
@@ -64,12 +65,15 @@ export default function StudentDashboard() {
   if (!profile) return null
 
   const initials = profile.nickname?.[0]?.toUpperCase() || '?'
+  const avatarConfig = profile.avatar_config ? JSON.parse(profile.avatar_config) : { ...DEFAULT_AVATAR, skinColor: profile.avatar_color || '#FDDBB4' }
 
   return (
     <div style={styles.page}>
       <div style={styles.header}>
         <div style={styles.headerContent}>
-          <div style={styles.avatar(profile.avatar_color)}>{initials}</div>
+          <div style={styles.avatarWrap}>
+            <AvatarSVG config={avatarConfig} size={44} />
+          </div>
           <div>
             <div style={styles.nickname}>{profile.nickname} 👋</div>
             <div style={styles.school}>{profile.school}</div>
@@ -138,13 +142,11 @@ const styles = {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   },
   headerContent: { display: 'flex', alignItems: 'center', gap: 12 },
-  avatar: (color) => ({
-    width: 44, height: 44, borderRadius: '50%',
-    background: color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '1.1rem', fontWeight: 800, color: 'white',
-    fontFamily: 'Sora, sans-serif',
+  avatarWrap: {
+    width: 44, height: 44, borderRadius: '50%', overflow: 'hidden',
     border: '2px solid rgba(255,255,255,0.4)', flexShrink: 0,
-  }),
+    background: 'white',
+  },
   nickname: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: 'white' },
   school: { fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', marginTop: 2 },
   signOutBtn: {
