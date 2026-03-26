@@ -91,24 +91,23 @@ export default function TeacherShop() {
   }
 
   async function approveRedemption(id, approve) {
+    const redemption = pendingRedemptions.find(r => r.id === id)
     const status = approve ? 'approved' : 'rejected'
+
     await supabase.from('redemptions').update({ status, approved_by: profile.id }).eq('id', id)
 
-    if (!approve) {
-      // Refund points
-      const redemption = pendingRedemptions.find(r => r.id === id)
-      if (redemption) {
-        await supabase.from('point_transactions').insert({
-          student_id: redemption.student_id,
-          teacher_id: profile.id,
-          points: redemption.points_spent,
-          transaction_type: 'earn',
-          reason: `คืนแต้ม: ${redemption.reward?.title}`,
-        })
-      }
+    if (approve && redemption) {
+      // Deduct points only when approved
+      await supabase.from('point_transactions').insert({
+        student_id: redemption.student_id,
+        teacher_id: profile.id,
+        points: redemption.points_spent,
+        transaction_type: 'spend',
+        reason: `แลก: ${redemption.reward?.title}`,
+      })
     }
 
-    showToast(approve ? '✅ อนุมัติแล้ว' : '❌ ปฏิเสธและคืนแต้มแล้ว', approve ? 'success' : 'info')
+    showToast(approve ? '✅ อนุมัติแล้ว' : '❌ ปฏิเสธแล้ว', approve ? 'success' : 'info')
     fetchAll()
   }
 

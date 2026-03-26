@@ -39,7 +39,7 @@ export default function StudentShop() {
     }
     setConfirming(true)
     try {
-      // Create redemption record
+      // Create redemption record only - points deducted when teacher approves
       const { error: redError } = await supabase.from('redemptions').insert({
         student_id: profile.id,
         reward_id: selected.id,
@@ -48,16 +48,7 @@ export default function StudentShop() {
       })
       if (redError) throw redError
 
-      // Deduct points
-      const { error: txError } = await supabase.from('point_transactions').insert({
-        student_id: profile.id,
-        points: selected.points_cost,
-        transaction_type: 'spend',
-        reason: `แลก: ${selected.title}`,
-      })
-      if (txError) throw txError
-
-      showToast(`แลก "${selected.title}" สำเร็จ! 🎉`, 'success')
+      showToast(`ส่งคำขอแลก "${selected.title}" แล้ว! รอครูอนุมัติ 🎉`, 'success')
       setSelected(null)
       await refreshProfile()
       fetchRewards()
