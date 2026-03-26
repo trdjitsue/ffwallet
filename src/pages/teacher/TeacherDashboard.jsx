@@ -30,7 +30,7 @@ export default function TeacherDashboard() {
       .select('*, student:student_id(nickname, avatar_color)')
       .eq('teacher_id', profile.id)
       .order('created_at', { ascending: false })
-      .limit(8)
+      .limit(5)
     setRecentTx(txData || [])
     setLoading(false)
   }
@@ -77,7 +77,10 @@ export default function TeacherDashboard() {
 
       {/* Recent Transactions */}
       <div style={styles.section}>
-        <div style={styles.sectionTitle}>แต้มที่ให้ล่าสุด</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={styles.sectionTitle}>แต้มที่ให้ล่าสุด</div>
+          <a href="/teacher/history" style={styles.seeAll}>ดูทั้งหมด →</a>
+        </div>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 24, color: '#9898AD' }}>กำลังโหลด...</div>
         ) : recentTx.length === 0 ? (
@@ -156,7 +159,11 @@ const styles = {
   section: { padding: '0 16px 16px' },
   sectionTitle: {
     fontFamily: 'Sora, sans-serif', fontWeight: 700,
-    fontSize: '1rem', color: '#1A1A2E', marginBottom: 12,
+    fontSize: '1rem', color: '#1A1A2E',
+  },
+  seeAll: {
+    fontFamily: 'Sora, sans-serif', fontWeight: 600,
+    fontSize: '0.8rem', color: '#6C3AF7', textDecoration: 'none',
   },
   quickGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 },
   quickCard: {

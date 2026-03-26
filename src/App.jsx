@@ -12,6 +12,7 @@ import StudentTests from './pages/student/StudentTests'
 import StudentQR from './pages/student/StudentQR'
 import StudentProfile from './pages/student/StudentProfile'
 import StudentCourses from './pages/student/StudentCourses'
+import StudentHistory from './pages/student/StudentHistory'
 
 // Teacher
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
@@ -20,6 +21,7 @@ import TeacherTests from './pages/teacher/TeacherTests'
 import TeacherShop from './pages/teacher/TeacherShop'
 import TeacherRanking from './pages/teacher/TeacherRanking'
 import TeacherCourses from './pages/teacher/TeacherCourses'
+import TeacherHistory from './pages/teacher/TeacherHistory'
 import TeacherCourseDetail from './pages/teacher/TeacherCourseDetail'
 
 // Admin
@@ -76,6 +78,7 @@ export default function App() {
           <Route path="/student/shop" element={<ProtectedRoute roles={['student']}><StudentShop /></ProtectedRoute>} />
           <Route path="/student/tests" element={<ProtectedRoute roles={['student']}><StudentTests /></ProtectedRoute>} />
           <Route path="/student/qr" element={<ProtectedRoute roles={['student']}><StudentQR /></ProtectedRoute>} />
+          <Route path="/student/history" element={<ProtectedRoute roles={['student']}><StudentHistory /></ProtectedRoute>} />
           <Route path="/student/courses" element={<ProtectedRoute roles={['student']}><StudentCourses /></ProtectedRoute>} />
           <Route path="/student/profile" element={<ProtectedRoute roles={['student']}><StudentProfile /></ProtectedRoute>} />
 
@@ -84,6 +87,7 @@ export default function App() {
           <Route path="/teacher/assign" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherAssignPoints /></ProtectedRoute>} />
           <Route path="/teacher/tests" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherTests /></ProtectedRoute>} />
           <Route path="/teacher/shop" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherShop /></ProtectedRoute>} />
+          <Route path="/teacher/history" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherHistory /></ProtectedRoute>} />
           <Route path="/teacher/courses" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherCourses /></ProtectedRoute>} />
           <Route path="/teacher/courses/:id" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherCourseDetail /></ProtectedRoute>} />
           <Route path="/teacher/ranking" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherRanking /></ProtectedRoute>} />

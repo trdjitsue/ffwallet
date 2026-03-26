@@ -43,7 +43,7 @@ export default function StudentDashboard() {
       .select('*, teacher:teacher_id(nickname)')
       .eq('student_id', profile.id)
       .order('created_at', { ascending: false })
-      .limit(10)
+      .limit(5)
     setTransactions(data || [])
     setLoading(false)
   }
@@ -91,7 +91,10 @@ export default function StudentDashboard() {
       </div>
 
       <div style={styles.section}>
-        <div style={styles.sectionTitle}>ประวัติล่าสุด</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={styles.sectionTitle}>ประวัติล่าสุด</div>
+          <a href="/student/history" style={styles.seeAll}>ดูทั้งหมด →</a>
+        </div>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '20px', color: '#9898AD' }}>กำลังโหลด...</div>
         ) : transactions.length === 0 ? (
@@ -187,7 +190,11 @@ const styles = {
   section: { padding: '16px' },
   sectionTitle: {
     fontFamily: 'Sora, sans-serif', fontWeight: 700,
-    fontSize: '1rem', color: '#1A1A2E', marginBottom: 12,
+    fontSize: '1rem', color: '#1A1A2E',
+  },
+  seeAll: {
+    fontFamily: 'Sora, sans-serif', fontWeight: 600,
+    fontSize: '0.8rem', color: '#6C3AF7', textDecoration: 'none',
   },
   transactionList: {
     background: 'white', borderRadius: 16,
