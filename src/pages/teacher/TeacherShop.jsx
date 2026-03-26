@@ -23,6 +23,8 @@ export default function TeacherShop() {
   const [saving, setSaving] = useState(false)
   const [pendingRedemptions, setPendingRedemptions] = useState([])
   const [tab, setTab] = useState('rewards') // 'rewards' | 'redemptions'
+  const [selectedReward, setSelectedReward] = useState(null)
+  const [rewardRedemptions, setRewardRedemptions] = useState([])
 
   useEffect(() => { fetchAll() }, [])
 
@@ -37,6 +39,15 @@ export default function TeacherShop() {
     setRewards(rewardsRes.data || [])
     setPendingRedemptions(redemptionsRes.data || [])
     setLoading(false)
+  }
+
+  async function fetchRewardRedemptions(rewardId) {
+    const { data } = await supabase
+      .from('redemptions')
+      .select('*, student:student_id(nickname, avatar_color, first_name, last_name)')
+      .eq('reward_id', rewardId)
+      .order('created_at', { ascending: false })
+    setRewardRedemptions(data || [])
   }
 
   async function handleCreate() {
@@ -137,7 +148,8 @@ export default function TeacherShop() {
             </div>
           ) : (
             rewards.map(r => (
-              <div key={r.id} style={{ ...styles.rewardRow, opacity: r.is_active ? 1 : 0.5 }}>
+              <div key={r.id} style={{ ...styles.rewardRow, opacity: r.is_active ? 1 : 0.5, cursor: 'pointer' }}
+                onClick={() => { setSelectedReward(r); fetchRewardRedemptions(r.id) }}>
                 <div style={styles.rewardEmoji}>{r.image_emoji}</div>
                 <div style={styles.rewardInfo}>
                   <div style={styles.rewardTitle}>{r.title}</div>
@@ -145,7 +157,7 @@ export default function TeacherShop() {
                     💰 {r.points_cost} แต้ม · {r.stock === -1 ? 'ไม่จำกัด' : `เหลือ ${r.stock}`}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                   <button
                     style={{ ...styles.toggleBtn, background: r.is_active ? '#D0FFF4' : '#F4F4F6', color: r.is_active ? '#007A5A' : '#9898AD' }}
                     onClick={() => toggleReward(r)}
@@ -201,6 +213,60 @@ export default function TeacherShop() {
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* Reward Detail Modal */}
+      {selectedReward && (
+        <div className="modal-overlay" onClick={() => setSelectedReward(null)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '85dvh' }}>
+            <div className="modal-handle" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+              <div style={{ fontSize: '2.5rem' }}>{selectedReward.image_emoji}</div>
+              <div style={{ flex: 1 }}>
+                <div style={styles.modalTitle}>{selectedReward.title}</div>
+                <div style={{ fontSize: '0.78rem', color: '#9898AD', marginTop: 4 }}>
+                  💰 {selectedReward.points_cost} แต้ม · {selectedReward.stock === -1 ? 'ไม่จำกัด' : `เหลือ ${selectedReward.stock}`}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.85rem', color: '#6E6E88', marginBottom: 10 }}>
+              ประวัติการแลก ({rewardRedemptions.length} ครั้ง)
+            </div>
+
+            {rewardRedemptions.length === 0 ? (
+              <div className="empty-state">
+                <span className="emoji">📭</span>
+                <p>ยังไม่มีใครแลก</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: '50dvh', overflowY: 'auto' }}>
+                {rewardRedemptions.map(r => (
+                  <div key={r.id} style={styles.redemptionRow}>
+                    <div style={styles.rAvatar(r.student?.avatar_color)}>
+                      {r.student?.nickname?.[0]?.toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.88rem', color: '#1A1A2E' }}>
+                        {r.student?.nickname}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#9898AD' }}>
+                        {r.student?.first_name} {r.student?.last_name} · {new Date(r.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <div style={{
+                      fontSize: '0.72rem', fontWeight: 700, borderRadius: 8, padding: '3px 8px',
+                      background: r.status === 'approved' ? '#D0FFF4' : r.status === 'rejected' ? '#FFE5E5' : '#FFF9E0',
+                      color: r.status === 'approved' ? '#007A5A' : r.status === 'rejected' ? '#C53030' : '#8a6500',
+                    }}>
+                      {r.status === 'approved' ? '✅ อนุมัติ' : r.status === 'rejected' ? '❌ ปฏิเสธ' : '⏳ รอ'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -318,6 +384,17 @@ const styles = {
     fontFamily: 'Sora, sans-serif', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
     flexShrink: 0, transition: 'all 0.2s',
   },
+  redemptionRow: {
+    display: 'flex', alignItems: 'center', gap: 10,
+    padding: '10px 4px', borderBottom: '1px solid #F4F4F6',
+  },
+  rAvatar: (color) => ({
+    width: 34, height: 34, borderRadius: '50%',
+    background: color || '#6C3AF7',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '0.85rem', fontWeight: 800, color: 'white',
+    fontFamily: 'Sora, sans-serif', flexShrink: 0,
+  }),
   deleteBtn: {
     width: 32, height: 32, borderRadius: 8, border: 'none',
     background: '#FFE5E5', cursor: 'pointer', fontSize: '0.85rem',
