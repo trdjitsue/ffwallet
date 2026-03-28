@@ -127,7 +127,10 @@ export default function StudentShop() {
                 key={reward.id}
                 reward={reward}
                 canAfford={profile?.points >= reward.points_cost}
-                onSelect={() => setSelected(reward)}
+                onSelect={() => {
+                  const myRed2 = myRedemptions.find(r => r && r.reward_id === reward.id)
+                  if (!myRed2) setSelected(reward)
+                }}
                 redemptionStatus={myRed?.status}
               />
             )

@@ -23,6 +23,7 @@ export default function TeacherCourseDetail() {
   const [bulkMode, setBulkMode] = useState(false)
   const [bulkSelected, setBulkSelected] = useState([])
   const [submittingBulk, setSubmittingBulk] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(null) // member object to remove
 
   useEffect(() => { fetchData() }, [id])
 
@@ -98,8 +99,13 @@ export default function TeacherCourseDetail() {
     setBulkSelected(members.map(m => m.student_id))
   }
 
-  async function removeMember(memberId) {
-    await supabase.from('course_members').delete().eq('id', memberId)
+  async function removeMember(member) {
+    setConfirmRemove(member)
+  }
+
+  async function confirmRemoveMember() {
+    await supabase.from('course_members').delete().eq('id', confirmRemove.id)
+    setConfirmRemove(null)
     fetchData()
     showToast('นำนักเรียนออกแล้ว', 'info')
   }
@@ -222,7 +228,7 @@ export default function TeacherCourseDetail() {
               </div>
               <div style={styles.pts}>{s?.points || 0}<span style={styles.ptsLabel}> แต้ม</span></div>
               {!bulkMode && (
-                <button style={styles.removeBtn} onClick={e => { e.stopPropagation(); removeMember(m.id) }}>✕</button>
+                <button style={styles.removeBtn} onClick={e => { e.stopPropagation(); removeMember(m) }}>✕</button>
               )}
             </div>
           )
@@ -279,6 +285,28 @@ export default function TeacherCourseDetail() {
               <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleAssign} disabled={assigning || !points}>
                 {assigning ? <><span className="spinner" /> กำลังให้...</> : `⭐ ให้ ${points || '?'} แต้ม`}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Remove Modal */}
+      {confirmRemove && (
+        <div className="modal-overlay" onClick={() => setConfirmRemove(null)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-handle" />
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: 10 }}>⚠️</div>
+              <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '1.1rem', color: '#1A1A2E' }}>
+                นำ {confirmRemove.student?.nickname} ออกจากคอร์ส?
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#9898AD', marginTop: 8 }}>
+                {confirmRemove.student?.first_name} {confirmRemove.student?.last_name} จะถูกนำออกจากคอร์สนี้
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setConfirmRemove(null)}>ยกเลิก</button>
+              <button className="btn btn-danger" style={{ flex: 1 }} onClick={confirmRemoveMember}>นำออก</button>
             </div>
           </div>
         </div>
