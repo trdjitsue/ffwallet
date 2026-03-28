@@ -68,10 +68,10 @@ export default function TeacherDashboard() {
       <div style={styles.section}>
         <div style={styles.sectionTitle}>เมนูด่วน</div>
         <div style={styles.quickGrid}>
-          <QuickAction href="/teacher/assign" icon="📷" label="สแกน QR" sub="ให้แต้มด้วย QR" color="#6C3AF7" />
-          <QuickAction href="/teacher/assign" icon="✍️" label="ให้แต้มด้วยชื่อ" sub="ค้นหาด้วยชื่อ" color="#9B72FF" />
-          <QuickAction href="/teacher/tests" icon="➕" label="สร้างกิจกรรม" sub="Quiz & Tasks" color="#00D9A3" />
-          <QuickAction href="/teacher/shop" icon="🛍️" label="จัดการร้าน" sub="เพิ่ม/ลบของ" color="#F5C842" />
+          <QuickAction href="/teacher/assign" icon="⭐" label="ให้แต้ม" sub="QR หรือค้นชื่อ" color="#6C3AF7" />
+          <QuickAction href="/teacher/courses" icon="📚" label="คอร์ส" sub="จัดการห้องเรียน" color="#9B72FF" />
+          <QuickAction href="/teacher/tests" icon="📝" label="กิจกรรม" sub="สร้าง & จัดการ" color="#00D9A3" />
+          <QuickAction href="/teacher/ranking" icon="🏆" label="อันดับ" sub="ดูคะแนนทุกคน" color="#F5C842" />
         </div>
       </div>
 
