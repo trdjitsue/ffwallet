@@ -28,7 +28,7 @@ export default function StudentShop() {
       .select('reward_id, status')
       .eq('student_id', profile.id)
       .in('status', ['pending', 'approved'])
-    setMyRedemptions(data || [])
+    setMyRedemptions((data || []).filter(Boolean))
   }
 
   async function fetchRewards() {
@@ -121,7 +121,7 @@ export default function StudentShop() {
           </div>
         ) : (
           filtered.map(reward => {
-            const myRed = myRedemptions.find(r => r.reward_id === reward.id)
+            const myRed = myRedemptions.find(r => r && r.reward_id === reward.id)
             return (
               <RewardCard
                 key={reward.id}
