@@ -14,62 +14,56 @@ export default function StudentShop() {
   const { profile, refreshProfile } = useAuth()
   const { toast, showToast } = useToast()
   const [rewards, setRewards] = useState([])
+  const [myRedemptions, setMyRedemptions] = useState([]) // [{ reward_id, status }]
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [confirming, setConfirming] = useState(false)
-  const [myRedemptions, setMyRedemptions] = useState([])
   const [filter, setFilter] = useState('all')
 
-  useEffect(() => { fetchRewards(); fetchMyRedemptions() }, [])
+  useEffect(() => { fetchAll() }, [])
 
-  async function fetchMyRedemptions() {
-    const { data } = await supabase
-      .from('redemptions')
-      .select('reward_id, status')
-      .eq('student_id', profile.id)
-      .in('status', ['pending', 'approved'])
-    setMyRedemptions((data || []).filter(Boolean))
-  }
-
-  async function fetchRewards() {
+  async function fetchAll() {
     const [rewardsRes, redemptionsRes] = await Promise.all([
       supabase.from('rewards').select('*').eq('is_active', true).order('points_cost'),
-      supabase.from('redemptions').select('reward_id, status').eq('student_id', profile.id).eq('status', 'approved'),
+      supabase.from('redemptions')
+        .select('reward_id, status')
+        .eq('student_id', profile.id)
+        .in('status', ['pending', 'approved']),
     ])
     setRewards(rewardsRes.data || [])
-    setMyRedemptions((redemptionsRes.data || []).map(r => r.reward_id))
+    setMyRedemptions((redemptionsRes.data || []).filter(Boolean))
     setLoading(false)
+  }
+
+  function getRedemptionStatus(rewardId) {
+    const r = myRedemptions.find(r => r && r.reward_id === rewardId)
+    return r?.status || null
   }
 
   async function handleRedeem() {
     if (!selected) return
     if (profile.points < selected.points_cost) {
-      showToast('แต้มไม่พอ 😢', 'error')
-      return
+      showToast('แต้มไม่พอ 😢', 'error'); return
     }
-    if (myRedemptions.includes(selected.id)) {
-      showToast('แลกของนี้ไปแล้ว', 'error')
-      setSelected(null)
-      return
+    const existingStatus = getRedemptionStatus(selected.id)
+    if (existingStatus) {
+      showToast(existingStatus === 'pending' ? 'รออนุมัติอยู่' : 'แลกไปแล้ว', 'error')
+      setSelected(null); return
     }
     setConfirming(true)
     try {
-      // Create redemption record only - points deducted when teacher approves
-      const { error: redError } = await supabase.from('redemptions').insert({
+      const { error } = await supabase.from('redemptions').insert({
         student_id: profile.id,
         reward_id: selected.id,
         points_spent: selected.points_cost,
         status: 'pending',
       })
-      if (redError) throw redError
-
+      if (error) throw error
       showToast(`ส่งคำขอแลก "${selected.title}" แล้ว! รอครูอนุมัติ 🎉`, 'success')
       setSelected(null)
-      await refreshProfile()
-      fetchRewards()
-      fetchMyRedemptions()
-    } catch (err) {
-      showToast('เกิดข้อผิดพลาด ลองใหม่', 'error')
+      await fetchAll()
+    } catch {
+      showToast('เกิดข้อผิดพลาด', 'error')
     } finally {
       setConfirming(false)
     }
@@ -81,7 +75,6 @@ export default function StudentShop() {
     <div style={styles.page}>
       <Toast toast={toast} />
 
-      {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerTitle}>🛍️ ร้านแลกของ</div>
         <div style={styles.pointsChip}>
@@ -93,14 +86,8 @@ export default function StudentShop() {
       {/* Filter tabs */}
       <div style={styles.filterWrap}>
         {['all', 'item', 'activity', 'privilege'].map(cat => (
-          <button
-            key={cat}
-            onClick={() => setFilter(cat)}
-            style={{
-              ...styles.filterBtn,
-              ...(filter === cat ? styles.filterActive : {}),
-            }}
-          >
+          <button key={cat} onClick={() => setFilter(cat)}
+            style={{ ...styles.filterBtn, ...(filter === cat ? styles.filterActive : {}) }}>
             {cat === 'all' ? '✨ ทั้งหมด' : CATEGORY_LABELS[cat]}
           </button>
         ))}
@@ -119,23 +106,21 @@ export default function StudentShop() {
               <p>ยังไม่มีของในหมวดนี้</p>
             </div>
           </div>
-        ) : (
-          filtered.map(reward => {
-            const myRed = myRedemptions.find(r => r && r.reward_id === reward.id)
-            return (
-              <RewardCard
-                key={reward.id}
-                reward={reward}
-                canAfford={profile?.points >= reward.points_cost}
-                onSelect={() => {
-                  const myRed2 = myRedemptions.find(r => r && r.reward_id === reward.id)
-                  if (!myRed2) setSelected(reward)
-                }}
-                redemptionStatus={myRed?.status}
-              />
-            )
-          })
-        )}
+        ) : filtered.map(reward => {
+          const status = getRedemptionStatus(reward.id)
+          const canAfford = profile?.points >= reward.points_cost
+          return (
+            <RewardCard
+              key={reward.id}
+              reward={reward}
+              canAfford={canAfford}
+              redemptionStatus={status}
+              onSelect={() => {
+                if (!status) setSelected(reward)
+              }}
+            />
+          )
+        })}
       </div>
 
       {/* Modal */}
@@ -146,9 +131,7 @@ export default function StudentShop() {
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <div style={{ fontSize: '3.5rem', marginBottom: 12 }}>{selected.image_emoji}</div>
               <h2 style={styles.modalTitle}>{selected.title}</h2>
-              {selected.description && (
-                <p style={styles.modalDesc}>{selected.description}</p>
-              )}
+              {selected.description && <p style={styles.modalDesc}>{selected.description}</p>}
             </div>
 
             <div style={styles.costRow}>
@@ -167,13 +150,9 @@ export default function StudentShop() {
 
             <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setSelected(null)}>ยกเลิก</button>
-              <button
-                className="btn btn-primary"
-                style={{ flex: 2 }}
-                onClick={handleRedeem}
-                disabled={confirming || profile?.points < selected.points_cost}
-              >
-                {confirming ? <><span className="spinner" /> กำลังแลก...</> : '✨ ยืนยันแลก'}
+              <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleRedeem}
+                disabled={confirming || profile?.points < selected.points_cost}>
+                {confirming ? <><span className="spinner" /> กำลังส่งคำขอ...</> : '✨ ยืนยันแลก'}
               </button>
             </div>
           </div>
@@ -186,23 +165,34 @@ export default function StudentShop() {
   )
 }
 
-function RewardCard({ reward, canAfford, alreadyRedeemed, onSelect }) {
+function RewardCard({ reward, canAfford, redemptionStatus, onSelect }) {
+  const isPending = redemptionStatus === 'pending'
+  const isApproved = redemptionStatus === 'approved'
+  const dimmed = !canAfford || isPending || isApproved
+
   return (
     <div
-      style={{ ...styles.rewardCard, ...(canAfford && !alreadyRedeemed ? {} : styles.rewardCardDimmed) }}
-      onClick={alreadyRedeemed ? undefined : onSelect}
+      style={{
+        ...styles.rewardCard,
+        ...(dimmed ? styles.rewardCardDimmed : {}),
+        cursor: isPending || isApproved ? 'default' : 'pointer',
+      }}
+      onClick={onSelect}
     >
       <div style={styles.rewardEmoji}>{reward.image_emoji}</div>
       <div style={styles.rewardTitle}>{reward.title}</div>
       <div style={styles.catBadge}>{CATEGORY_LABELS[reward.category]}</div>
-      <div style={{ ...styles.rewardCost, color: canAfford ? '#6C3AF7' : '#9898AD' }}>
-        💰 {reward.points_cost} แต้ม
-      </div>
-      {alreadyRedeemed ? (
-        <div style={{ ...styles.stockBadge, background: '#D0FFF4', color: '#007A5A' }}>✅ แลกแล้ว</div>
-      ) : reward.stock > 0 ? (
+
+      {isPending && <div style={styles.pendingBadge}>⏳ รออนุมัติ</div>}
+      {isApproved && <div style={styles.approvedBadge}>✅ แลกแล้ว</div>}
+      {!isPending && !isApproved && (
+        <div style={{ ...styles.rewardCost, color: canAfford ? '#6C3AF7' : '#9898AD' }}>
+          💰 {reward.points_cost} แต้ม
+        </div>
+      )}
+      {reward.stock > 0 && !isPending && !isApproved && (
         <div style={styles.stockBadge}>เหลือ {reward.stock}</div>
-      ) : null}
+      )}
     </div>
   )
 }
@@ -214,19 +204,13 @@ const styles = {
     padding: '52px 20px 20px',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   },
-  headerTitle: {
-    fontFamily: 'Sora, sans-serif', fontWeight: 800,
-    fontSize: '1.3rem', color: 'white',
-  },
+  headerTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '1.3rem', color: 'white' },
   pointsChip: {
     display: 'flex', alignItems: 'center', gap: 6,
     background: 'rgba(255,255,255,0.2)', borderRadius: 20,
     padding: '6px 14px', backdropFilter: 'blur(8px)',
   },
-  pointsNum: {
-    fontFamily: 'Sora, sans-serif', fontWeight: 700,
-    fontSize: '0.9rem', color: 'white',
-  },
+  pointsNum: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: 'white' },
   filterWrap: {
     display: 'flex', gap: 8, padding: '16px',
     overflowX: 'auto', scrollbarWidth: 'none',
@@ -249,59 +233,32 @@ const styles = {
   },
   rewardCard: {
     background: 'white', borderRadius: 16, padding: '16px 12px',
-    border: '2px solid transparent',
     boxShadow: '0 2px 12px rgba(108,58,247,0.08)',
-    cursor: 'pointer', textAlign: 'center',
+    border: '2px solid transparent',
+    textAlign: 'center',
     transition: 'all 0.2s',
     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
     animation: 'fadeIn 0.3s ease',
   },
-  rewardCardDimmed: { opacity: 0.6 },
+  rewardCardDimmed: { opacity: 0.7 },
   rewardEmoji: { fontSize: '2.5rem' },
   rewardTitle: {
     fontFamily: 'Sora, sans-serif', fontWeight: 700,
     fontSize: '0.85rem', color: '#1A1A2E', lineHeight: 1.3,
   },
-  catBadge: {
-    fontSize: '0.65rem', color: '#9898AD', background: '#F4F4F6',
-    borderRadius: 10, padding: '2px 8px',
-  },
-  rewardCost: {
-    fontFamily: 'Sora, sans-serif', fontWeight: 800,
-    fontSize: '0.95rem',
-  },
-  stockBadge: {
-    fontSize: '0.65rem', color: '#FF6B6B', background: '#FFE5E5',
-    borderRadius: 10, padding: '2px 8px',
-  },
-  pendingBadge: {
-    fontSize: '0.65rem', color: '#8a6500', background: '#FFF9E0',
-    borderRadius: 10, padding: '3px 8px', fontWeight: 700,
-  },
-  approvedBadge: {
-    fontSize: '0.65rem', color: '#007A5A', background: '#D0FFF4',
-    borderRadius: 10, padding: '3px 8px', fontWeight: 700,
-  },
-  modalTitle: {
-    fontFamily: 'Sora, sans-serif', fontWeight: 800,
-    fontSize: '1.3rem', color: '#1A1A2E', marginBottom: 8,
-  },
-  modalDesc: {
-    fontSize: '0.85rem', color: '#6E6E88',
-  },
-  costRow: {
-    display: 'flex', justifyContent: 'space-between',
-    padding: '10px 0', borderBottom: '1px solid #F4F4F6',
-  },
+  catBadge: { fontSize: '0.65rem', color: '#9898AD', background: '#F4F4F6', borderRadius: 10, padding: '2px 8px' },
+  rewardCost: { fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '0.95rem' },
+  stockBadge: { fontSize: '0.65rem', color: '#FF6B6B', background: '#FFE5E5', borderRadius: 10, padding: '2px 8px' },
+  pendingBadge: { fontSize: '0.7rem', color: '#8a6500', background: '#FFF9E0', borderRadius: 10, padding: '3px 10px', fontWeight: 700 },
+  approvedBadge: { fontSize: '0.7rem', color: '#007A5A', background: '#D0FFF4', borderRadius: 10, padding: '3px 10px', fontWeight: 700 },
+  modalTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '1.3rem', color: '#1A1A2E', marginBottom: 8 },
+  modalDesc: { fontSize: '0.85rem', color: '#6E6E88' },
+  costRow: { display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F4F4F6' },
   costLabel: { fontSize: '0.88rem', color: '#6E6E88' },
-  costValue: {
-    fontFamily: 'Sora, sans-serif', fontWeight: 700,
-    fontSize: '0.95rem', color: '#1A1A2E',
-  },
+  costValue: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#1A1A2E' },
   notEnough: {
-    background: '#FFE5E5', color: '#C53030',
-    borderRadius: 10, padding: '10px 14px',
-    fontSize: '0.82rem', fontWeight: 600,
+    background: '#FFE5E5', color: '#C53030', borderRadius: 10,
+    padding: '10px 14px', fontSize: '0.82rem', fontWeight: 600,
     textAlign: 'center', marginTop: 10,
   },
 }
