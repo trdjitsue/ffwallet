@@ -65,8 +65,10 @@ export default function TeacherCourses() {
     showToast(course.is_active ? 'ปิดคอร์สแล้ว' : 'เปิดคอร์สแล้ว', 'info')
   }
 
-  async function deleteCourse(id) {
-    if (!window.confirm('ลบคอร์สนี้?')) return
+  async function deleteCourse(id, title) {
+    if (!window.confirm(`ลบคอร์ส "${title}" ใช่ไหม?
+
+นักเรียนทุกคนจะถูกนำออกจากคอร์สนี้`)) return
     await supabase.from('courses').delete().eq('id', id)
     fetchCourses()
     showToast('ลบคอร์สแล้ว', 'info')
@@ -107,7 +109,7 @@ export default function TeacherCourses() {
               <button style={styles.actionBtn} onClick={() => toggleCourse(course)}>
                 {course.is_active ? 'ปิด' : 'เปิด'}
               </button>
-              <button style={styles.deleteBtn} onClick={() => deleteCourse(course.id)}>🗑️</button>
+              <button style={styles.deleteBtn} onClick={() => deleteCourse(course.id, course.title)}>🗑️</button>
             </div>
           </div>
         ))}

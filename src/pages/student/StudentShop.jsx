@@ -17,17 +17,27 @@ export default function StudentShop() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [confirming, setConfirming] = useState(false)
+  const [myRedemptions, setMyRedemptions] = useState([])
   const [filter, setFilter] = useState('all')
 
-  useEffect(() => { fetchRewards() }, [])
+  useEffect(() => { fetchRewards(); fetchMyRedemptions() }, [])
+
+  async function fetchMyRedemptions() {
+    const { data } = await supabase
+      .from('redemptions')
+      .select('reward_id, status')
+      .eq('student_id', profile.id)
+      .in('status', ['pending', 'approved'])
+    setMyRedemptions(data || [])
+  }
 
   async function fetchRewards() {
-    const { data } = await supabase
-      .from('rewards')
-      .select('*')
-      .eq('is_active', true)
-      .order('points_cost')
-    setRewards(data || [])
+    const [rewardsRes, redemptionsRes] = await Promise.all([
+      supabase.from('rewards').select('*').eq('is_active', true).order('points_cost'),
+      supabase.from('redemptions').select('reward_id, status').eq('student_id', profile.id).eq('status', 'approved'),
+    ])
+    setRewards(rewardsRes.data || [])
+    setMyRedemptions((redemptionsRes.data || []).map(r => r.reward_id))
     setLoading(false)
   }
 
@@ -35,6 +45,11 @@ export default function StudentShop() {
     if (!selected) return
     if (profile.points < selected.points_cost) {
       showToast('แต้มไม่พอ 😢', 'error')
+      return
+    }
+    if (myRedemptions.includes(selected.id)) {
+      showToast('แลกของนี้ไปแล้ว', 'error')
+      setSelected(null)
       return
     }
     setConfirming(true)
@@ -52,6 +67,7 @@ export default function StudentShop() {
       setSelected(null)
       await refreshProfile()
       fetchRewards()
+      fetchMyRedemptions()
     } catch (err) {
       showToast('เกิดข้อผิดพลาด ลองใหม่', 'error')
     } finally {
@@ -104,14 +120,18 @@ export default function StudentShop() {
             </div>
           </div>
         ) : (
-          filtered.map(reward => (
-            <RewardCard
-              key={reward.id}
-              reward={reward}
-              canAfford={profile?.points >= reward.points_cost}
-              onSelect={() => setSelected(reward)}
-            />
-          ))
+          filtered.map(reward => {
+            const myRed = myRedemptions.find(r => r.reward_id === reward.id)
+            return (
+              <RewardCard
+                key={reward.id}
+                reward={reward}
+                canAfford={profile?.points >= reward.points_cost}
+                onSelect={() => setSelected(reward)}
+                redemptionStatus={myRed?.status}
+              />
+            )
+          })
         )}
       </div>
 
@@ -163,11 +183,11 @@ export default function StudentShop() {
   )
 }
 
-function RewardCard({ reward, canAfford, onSelect }) {
+function RewardCard({ reward, canAfford, alreadyRedeemed, onSelect }) {
   return (
     <div
-      style={{ ...styles.rewardCard, ...(canAfford ? {} : styles.rewardCardDimmed) }}
-      onClick={onSelect}
+      style={{ ...styles.rewardCard, ...(canAfford && !alreadyRedeemed ? {} : styles.rewardCardDimmed) }}
+      onClick={alreadyRedeemed ? undefined : onSelect}
     >
       <div style={styles.rewardEmoji}>{reward.image_emoji}</div>
       <div style={styles.rewardTitle}>{reward.title}</div>
@@ -175,9 +195,11 @@ function RewardCard({ reward, canAfford, onSelect }) {
       <div style={{ ...styles.rewardCost, color: canAfford ? '#6C3AF7' : '#9898AD' }}>
         💰 {reward.points_cost} แต้ม
       </div>
-      {reward.stock > 0 && (
+      {alreadyRedeemed ? (
+        <div style={{ ...styles.stockBadge, background: '#D0FFF4', color: '#007A5A' }}>✅ แลกแล้ว</div>
+      ) : reward.stock > 0 ? (
         <div style={styles.stockBadge}>เหลือ {reward.stock}</div>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -248,6 +270,14 @@ const styles = {
   stockBadge: {
     fontSize: '0.65rem', color: '#FF6B6B', background: '#FFE5E5',
     borderRadius: 10, padding: '2px 8px',
+  },
+  pendingBadge: {
+    fontSize: '0.65rem', color: '#8a6500', background: '#FFF9E0',
+    borderRadius: 10, padding: '3px 8px', fontWeight: 700,
+  },
+  approvedBadge: {
+    fontSize: '0.65rem', color: '#007A5A', background: '#D0FFF4',
+    borderRadius: 10, padding: '3px 8px', fontWeight: 700,
   },
   modalTitle: {
     fontFamily: 'Sora, sans-serif', fontWeight: 800,

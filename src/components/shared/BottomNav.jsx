@@ -14,10 +14,10 @@ export default function BottomNav({ role }) {
 
   const teacherTabs = [
     { to: '/teacher', icon: '🏠', label: 'หน้าแรก' },
+    { to: '/teacher/feed', icon: '📢', label: 'Feed' },
     { to: '/teacher/courses', icon: '📚', label: 'คอร์ส' },
     { to: '/teacher/assign', icon: '⭐', label: 'ให้แต้ม' },
     { to: '/teacher/ranking', icon: '🏆', label: 'อันดับ' },
-    { to: '/teacher/shop', icon: '🛍️', label: 'ของรางวัล' },
   ]
 
   const adminTabs = [
