@@ -140,8 +140,9 @@ function Step2({ form, updateForm, onNext, onBack }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div className="input-group">
           <label className="input-label">ชื่อเล่น</label>
-          <input className="input" placeholder="เช่น เบนซ์" value={form.nickname}
+          <input className="input" placeholder="เช่น 4_ธีร์" value={form.nickname}
             onChange={e => updateForm('nickname', e.target.value)} />
+          <span style={{ fontSize: '0.72rem', color: '#9898AD', marginTop: 4 }}>รูปแบบ: FF gen_ชื่อเล่น</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div className="input-group">
