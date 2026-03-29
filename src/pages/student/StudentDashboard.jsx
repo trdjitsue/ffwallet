@@ -90,6 +90,16 @@ export default function StudentDashboard() {
         <div style={styles.scoreUnit}>คะแนน</div>
       </div>
 
+      {/* FF Tournament */}
+      <div style={styles.tournamentCard}>
+        <div style={styles.tournamentLeft}>
+          <div style={styles.tournamentBadge}>เร็วๆ นี้</div>
+          <div style={styles.tournamentTitle}>FF Tournament</div>
+          <div style={styles.tournamentSub}>Coming Soon...</div>
+        </div>
+        <div style={styles.tournamentEmoji}>🏆</div>
+      </div>
+
       <div style={styles.section}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={styles.sectionTitle}>ประวัติล่าสุด</div>
@@ -188,6 +198,34 @@ const styles = {
     fontFamily: 'Sora, sans-serif', marginTop: 6,
   },
   section: { padding: '16px' },
+  tournamentCard: {
+    margin: '0 16px 16px',
+    background: 'linear-gradient(135deg, #1A0760 0%, #4519C9 60%, #6C3AF7 100%)',
+    borderRadius: 20, padding: '20px',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    boxShadow: '0 8px 24px rgba(26,7,96,0.3)',
+    position: 'relative', overflow: 'hidden',
+  },
+  tournamentLeft: { display: 'flex', flexDirection: 'column', gap: 4 },
+  tournamentBadge: {
+    display: 'inline-block',
+    background: '#F5C842', color: '#1A0760',
+    fontSize: '0.65rem', fontWeight: 800,
+    borderRadius: 20, padding: '2px 10px',
+    letterSpacing: '0.05em', textTransform: 'uppercase',
+    width: 'fit-content',
+  },
+  tournamentTitle: {
+    fontFamily: 'Sora, sans-serif', fontWeight: 800,
+    fontSize: '1.3rem', color: 'white', letterSpacing: '-0.02em',
+  },
+  tournamentSub: {
+    fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)',
+    fontFamily: 'Space Mono, monospace',
+  },
+  tournamentEmoji: {
+    fontSize: '3rem', animation: 'float 3s ease infinite',
+  },
   sectionTitle: {
     fontFamily: 'Sora, sans-serif', fontWeight: 700,
     fontSize: '1rem', color: '#1A1A2E',
