@@ -45,12 +45,13 @@ export default function StudentTests() {
         .select('test_id')
         .eq('student_id', profile.id),
     ])
-    setTests(testsRes.data || [])
+    const testsData = testsRes.data || []
+    setTests(testsData)
     setCompletions((myCompRes.data || []).map(c => c.test_id))
-    setLoading(false)
 
-    // fetch counts after we have test ids
-    if (testsRes.data?.length) fetchCounts(testsRes.data.map(t => t.id))
+    // await fetchCounts before setting loading false
+    if (testsData.length) await fetchCounts(testsData.map(t => t.id))
+    setLoading(false)
   }
 
   async function fetchCounts(testIds) {
@@ -64,6 +65,8 @@ export default function StudentTests() {
     ;(data || []).forEach(c => {
       counts[c.test_id] = (counts[c.test_id] || 0) + 1
     })
+    // Set 0 for tests with no completions too
+    ids.forEach(id => { if (!counts[id]) counts[id] = 0 })
     setCompletionCounts(counts)
   }
 
