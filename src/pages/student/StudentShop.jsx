@@ -36,8 +36,9 @@ export default function StudentShop() {
   }
 
   function getRedemptionStatus(rewardId) {
-    const r = myRedemptions.find(r => r && r.reward_id === rewardId)
-    return r?.status || null
+    // Only block if there's a pending one - approved resets and can buy again
+    const pending = myRedemptions.find(r => r && r.reward_id === rewardId && r.status === 'pending')
+    return pending ? 'pending' : null
   }
 
   async function handleRedeem() {
@@ -190,6 +191,7 @@ function RewardCard({ reward, canAfford, redemptionStatus, onSelect }) {
           💰 {reward.points_cost} แต้ม
         </div>
       )}
+
       {reward.stock > 0 && !isPending && !isApproved && (
         <div style={styles.stockBadge}>เหลือ {reward.stock}</div>
       )}
