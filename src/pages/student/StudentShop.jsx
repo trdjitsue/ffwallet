@@ -28,7 +28,7 @@ export default function StudentShop() {
       supabase.from('redemptions')
         .select('reward_id, status')
         .eq('student_id', profile.id)
-        .in('status', ['pending', 'approved']),
+        .eq('status', 'pending'),
     ])
     setRewards(rewardsRes.data || [])
     setMyRedemptions((redemptionsRes.data || []).filter(Boolean))
