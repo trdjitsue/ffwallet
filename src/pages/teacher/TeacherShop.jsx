@@ -23,6 +23,7 @@ export default function TeacherShop() {
   const [saving, setSaving] = useState(false)
   const [pendingRedemptions, setPendingRedemptions] = useState([])
   const [tab, setTab] = useState('rewards') // 'rewards' | 'redemptions'
+  const [approvingId, setApprovingId] = useState(null)
   const [selectedReward, setSelectedReward] = useState(null)
   const [rewardRedemptions, setRewardRedemptions] = useState([])
 
@@ -91,24 +92,31 @@ export default function TeacherShop() {
   }
 
   async function approveRedemption(id, approve) {
-    const redemption = pendingRedemptions.find(r => r.id === id)
-    const status = approve ? 'approved' : 'rejected'
+    if (approvingId === id) return // prevent double click
+    setApprovingId(id)
+    try {
+      const redemption = pendingRedemptions.find(r => r.id === id)
+      const status = approve ? 'approved' : 'rejected'
 
-    await supabase.from('redemptions').update({ status, approved_by: profile.id }).eq('id', id)
+      await supabase.from('redemptions').update({ status, approved_by: profile.id }).eq('id', id)
 
-    if (approve && redemption) {
-      // Deduct points only when approved
-      await supabase.from('point_transactions').insert({
-        student_id: redemption.student_id,
-        teacher_id: profile.id,
-        points: redemption.points_spent,
-        transaction_type: 'spend',
-        reason: `แลก: ${redemption.reward?.title}`,
-      })
+      if (approve && redemption) {
+        await supabase.from('point_transactions').insert({
+          student_id: redemption.student_id,
+          teacher_id: profile.id,
+          points: redemption.points_spent,
+          transaction_type: 'spend',
+          reason: `แลก: ${redemption.reward?.title}`,
+        })
+      }
+
+      showToast(approve ? '✅ อนุมัติแล้ว' : '❌ ปฏิเสธแล้ว', approve ? 'success' : 'info')
+      fetchAll()
+    } catch {
+      showToast('เกิดข้อผิดพลาด', 'error')
+    } finally {
+      setApprovingId(null)
     }
-
-    showToast(approve ? '✅ อนุมัติแล้ว' : '❌ ปฏิเสธแล้ว', approve ? 'success' : 'info')
-    fetchAll()
   }
 
   return (
@@ -201,12 +209,14 @@ export default function TeacherShop() {
                 </div>
                 <div style={styles.redemptionBtns}>
                   <button className="btn btn-sm" style={{ flex: 1, background: '#FFE5E5', color: '#C53030', border: 'none' }}
-                    onClick={() => approveRedemption(r.id, false)}>
+                    onClick={() => approveRedemption(r.id, false)}
+                    disabled={approvingId === r.id}>
                     ❌ ปฏิเสธ
                   </button>
                   <button className="btn btn-sm btn-primary" style={{ flex: 2 }}
-                    onClick={() => approveRedemption(r.id, true)}>
-                    ✅ อนุมัติ
+                    onClick={() => approveRedemption(r.id, true)}
+                    disabled={approvingId === r.id}>
+                    {approvingId === r.id ? <><span className="spinner" /> กำลังดำเนินการ...</> : '✅ อนุมัติ'}
                   </button>
                 </div>
               </div>
