@@ -11,7 +11,7 @@ const CATEGORIES = [
   { value: 'privilege', label: '👑 สิทธิพิเศษ' },
 ]
 
-const emptyForm = { title: '', description: '', points_cost: '', category: 'item', image_emoji: '🎁', stock: -1 }
+const emptyForm = { title: '', description: '', points_cost: '', category: 'item', image_emoji: '🎁', stock: -1, allow_multiple: false }
 
 export default function TeacherShop() {
   const { profile } = useAuth()
@@ -33,7 +33,7 @@ export default function TeacherShop() {
     const [rewardsRes, redemptionsRes] = await Promise.all([
       supabase.from('rewards').select('*').order('points_cost'),
       supabase.from('redemptions')
-        .select('*, student:student_id(nickname, avatar_color), reward:reward_id(title, image_emoji)')
+        .select('*, student:student_id(nickname, avatar_color, first_name, last_name), reward:reward_id(title, image_emoji)')
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
     ])
@@ -63,6 +63,7 @@ export default function TeacherShop() {
         category: form.category,
         image_emoji: form.image_emoji,
         stock: parseInt(form.stock) || -1,
+        allow_multiple: form.allow_multiple,
         is_active: true,
         created_by: profile.id,
       })
@@ -260,6 +261,7 @@ export default function TeacherShop() {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.88rem', color: '#1A1A2E' }}>
                         {r.student?.nickname}
+                        {r.quantity > 1 && <span style={{ fontSize: '0.72rem', color: '#6C3AF7', background: '#EDE5FF', borderRadius: 8, padding: '1px 6px', marginLeft: 6, fontWeight: 700 }}>x{r.quantity}</span>}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#9898AD' }}>
                         {r.student?.first_name} {r.student?.last_name} · {new Date(r.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -322,6 +324,38 @@ export default function TeacherShop() {
                     style={{ textAlign: 'center' }} />
                 </div>
               </div>
+
+              {/* Allow multiple toggle */}
+              <div
+                onClick={() => setForm(f => ({ ...f, allow_multiple: !f.allow_multiple }))}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  background: form.allow_multiple ? '#EDE5FF' : '#F4F4F6',
+                  borderRadius: 12, padding: '12px 16px', cursor: 'pointer',
+                  border: form.allow_multiple ? '2px solid #6C3AF7' : '2px solid transparent',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <div style={{
+                  width: 22, height: 22, borderRadius: 6,
+                  background: form.allow_multiple ? '#6C3AF7' : 'white',
+                  border: form.allow_multiple ? 'none' : '2px solid #D0D0DC',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.8rem', color: 'white', flexShrink: 0,
+                  transition: 'all 0.2s',
+                }}>
+                  {form.allow_multiple && '✓'}
+                </div>
+                <div>
+                  <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: '0.88rem', color: '#1A1A2E' }}>
+                    แลกได้หลายชิ้น
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#9898AD', marginTop: 2 }}>
+                    {form.allow_multiple ? 'เด็กแลกได้ไม่จำกัดจำนวน' : 'เด็กแลกได้แค่ 1 ชิ้นเท่านั้น'}
+                  </div>
+                </div>
+              </div>
+
               <div className="input-group">
                 <label className="input-label">หมวดหมู่</label>
                 <select className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>

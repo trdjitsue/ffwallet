@@ -18,6 +18,7 @@ export default function StudentShop() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [confirming, setConfirming] = useState(false)
+  const [quantity, setQuantity] = useState(1)
   const [filter, setFilter] = useState('all')
 
   useEffect(() => { fetchAll() }, [])
@@ -43,7 +44,7 @@ export default function StudentShop() {
 
   async function handleRedeem() {
     if (!selected) return
-    if (profile.points < selected.points_cost) {
+    if (profile.points < selected.points_cost * quantity) {
       showToast('แต้มไม่พอ 😢', 'error'); return
     }
     const existingStatus = getRedemptionStatus(selected.id)
@@ -56,12 +57,14 @@ export default function StudentShop() {
       const { error } = await supabase.from('redemptions').insert({
         student_id: profile.id,
         reward_id: selected.id,
-        points_spent: selected.points_cost,
+        points_spent: selected.points_cost * quantity,
+        quantity: quantity,
         status: 'pending',
       })
       if (error) throw error
-      showToast(`ส่งคำขอแลก "${selected.title}" แล้ว! รอครูอนุมัติ 🎉`, 'success')
+      showToast(`ส่งคำขอแลก ${quantity} ชิ้น รอครูอนุมัติ 🎉`, 'success')
       setSelected(null)
+      setQuantity(1)
       await fetchAll()
     } catch {
       showToast('เกิดข้อผิดพลาด', 'error')
@@ -126,7 +129,7 @@ export default function StudentShop() {
 
       {/* Modal */}
       {selected && (
-        <div className="modal-overlay" onClick={() => setSelected(null)}>
+        <div className="modal-overlay" onClick={() => { setSelected(null); setQuantity(1) }}>
           <div className="modal-sheet" onClick={e => e.stopPropagation()}>
             <div className="modal-handle" />
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
@@ -136,23 +139,49 @@ export default function StudentShop() {
             </div>
 
             <div style={styles.costRow}>
-              <span style={styles.costLabel}>ราคา</span>
+              <span style={styles.costLabel}>ราคาต่อชิ้น</span>
               <span style={styles.costValue}>{selected.points_cost} แต้ม</span>
+            </div>
+
+            {/* Quantity selector */}
+            <div style={{ ...styles.costRow, alignItems: 'center' }}>
+              <span style={styles.costLabel}>จำนวน</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button
+                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                  style={styles.qtyBtn}
+                >−</button>
+                <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: '1.2rem', minWidth: 24, textAlign: 'center' }}>
+                  {quantity}
+                </span>
+                <button
+                  onClick={() => setQuantity(q => q + 1)}
+                  style={styles.qtyBtn}
+                  disabled={profile?.points < selected.points_cost * (quantity + 1)}
+                >+</button>
+              </div>
+            </div>
+
+            <div style={styles.costRow}>
+              <span style={styles.costLabel}>รวม</span>
+              <span style={{ ...styles.costValue, color: '#6C3AF7', fontSize: '1.1rem' }}>
+                {selected.points_cost * quantity} แต้ม
+              </span>
             </div>
             <div style={styles.costRow}>
               <span style={styles.costLabel}>แต้มของคุณ</span>
-              <span style={{ ...styles.costValue, color: profile?.points >= selected.points_cost ? '#00D9A3' : '#FF6B6B' }}>
+              <span style={{ ...styles.costValue, color: profile?.points >= selected.points_cost * quantity ? '#00D9A3' : '#FF6B6B' }}>
                 {profile?.points} แต้ม
               </span>
             </div>
-            {profile?.points < selected.points_cost && (
-              <div style={styles.notEnough}>❌ แต้มไม่เพียงพอ (ขาดอีก {selected.points_cost - profile.points} แต้ม)</div>
+            {profile?.points < selected.points_cost * quantity && (
+              <div style={styles.notEnough}>❌ แต้มไม่เพียงพอ</div>
             )}
 
             <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
-              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setSelected(null)}>ยกเลิก</button>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => { setSelected(null); setQuantity(1) }}>ยกเลิก</button>
               <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleRedeem}
-                disabled={confirming || profile?.points < selected.points_cost}>
+                disabled={confirming || profile?.points < selected.points_cost * quantity}>
                 {confirming ? <><span className="spinner" /> กำลังส่งคำขอ...</> : '✨ ยืนยันแลก'}
               </button>
             </div>
@@ -258,6 +287,13 @@ const styles = {
   costRow: { display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F4F4F6' },
   costLabel: { fontSize: '0.88rem', color: '#6E6E88' },
   costValue: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#1A1A2E' },
+  qtyBtn: {
+    width: 32, height: 32, borderRadius: '50%',
+    background: '#EDE5FF', border: 'none',
+    color: '#6C3AF7', fontFamily: 'Sora', fontWeight: 800,
+    fontSize: '1.1rem', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
   notEnough: {
     background: '#FFE5E5', color: '#C53030', borderRadius: 10,
     padding: '10px 14px', fontSize: '0.82rem', fontWeight: 600,
