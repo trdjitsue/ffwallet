@@ -23,7 +23,6 @@ import TeacherShop from './pages/teacher/TeacherShop'
 import TeacherRanking from './pages/teacher/TeacherRanking'
 import TeacherCourses from './pages/teacher/TeacherCourses'
 import TeacherHistory from './pages/teacher/TeacherHistory'
-import TeacherFeed from './pages/teacher/TeacherFeed'
 import TeacherCourseDetail from './pages/teacher/TeacherCourseDetail'
 
 // Admin
@@ -90,7 +89,6 @@ export default function App() {
           <Route path="/teacher/assign" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherAssignPoints /></ProtectedRoute>} />
           <Route path="/teacher/tests" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherTests /></ProtectedRoute>} />
           <Route path="/teacher/shop" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherShop /></ProtectedRoute>} />
-          <Route path="/teacher/feed" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherFeed /></ProtectedRoute>} />
           <Route path="/teacher/history" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherHistory /></ProtectedRoute>} />
           <Route path="/teacher/courses" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherCourses /></ProtectedRoute>} />
           <Route path="/teacher/courses/:id" element={<ProtectedRoute roles={['teacher', 'admin']}><TeacherCourseDetail /></ProtectedRoute>} />
