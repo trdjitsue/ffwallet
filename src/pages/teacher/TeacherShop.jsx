@@ -107,6 +107,7 @@ export default function TeacherShop() {
           points: redemption.points_spent,
           transaction_type: 'spend',
           reason: `แลก: ${redemption.reward?.title}`,
+          redemption_id: id,
         })
       }
 
