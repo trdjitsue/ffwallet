@@ -9,7 +9,7 @@ export default function BottomNav({ role }) {
     { to: '/student/courses', icon: '📚', label: 'คอร์ส' },
     { to: '/student/shop', icon: '🛍️', label: 'แลกของ' },
     { to: '/student/tests', icon: '📝', label: 'กิจกรรม' },
-    { to: '/student/qr', icon: '📱', label: 'QR' },
+    { to: '/student/tournament', icon: '🏆', label: 'Tournament' },
   ]
 
   const teacherTabs = [

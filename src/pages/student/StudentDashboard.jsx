@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import BottomNav from '../../components/shared/BottomNav'
@@ -6,6 +7,7 @@ import { AvatarSVG, DEFAULT_AVATAR } from '../../components/shared/AvatarBuilder
 
 export default function StudentDashboard() {
   const { profile, signOut, refreshProfile } = useAuth()
+  const navigate = useNavigate()
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [displayPoints, setDisplayPoints] = useState(0)
@@ -71,15 +73,18 @@ export default function StudentDashboard() {
     <div style={styles.page}>
       <div style={styles.header}>
         <div style={styles.headerContent}>
-          <div style={styles.avatarWrap}>
+          <button onClick={() => navigate('/student/qr')} style={styles.avatarBtn}>
             <AvatarSVG config={avatarConfig} size={44} />
-          </div>
+          </button>
           <div>
             <div style={styles.nickname}>{profile.nickname} 👋</div>
             <div style={styles.school}>{profile.school}</div>
           </div>
         </div>
-        <button onClick={signOut} style={styles.signOutBtn}>ออก</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button onClick={() => navigate('/student/qr')} style={styles.qrBtn}>📱 QR</button>
+          <button onClick={signOut} style={styles.signOutBtn}>ออก</button>
+        </div>
       </div>
 
       <div style={styles.scoreCard}>
@@ -88,16 +93,6 @@ export default function StudentDashboard() {
         <div style={styles.scoreLabel}>แต้มของฉัน</div>
         <div style={styles.scoreBig}>{displayPoints.toLocaleString()}</div>
         <div style={styles.scoreUnit}>คะแนน</div>
-      </div>
-
-      {/* FF Tournament */}
-      <div style={styles.tournamentCard}>
-        <div style={styles.tournamentLeft}>
-          <div style={styles.tournamentBadge}>เร็วๆ นี้</div>
-          <div style={styles.tournamentTitle}>FF Tournament</div>
-          <div style={styles.tournamentSub}>Coming Soon...</div>
-        </div>
-        <div style={styles.tournamentEmoji}>🏆</div>
       </div>
 
       <div style={styles.section}>
@@ -155,10 +150,16 @@ const styles = {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   },
   headerContent: { display: 'flex', alignItems: 'center', gap: 12 },
-  avatarWrap: {
+  avatarBtn: {
     width: 44, height: 44, borderRadius: '50%', overflow: 'hidden',
     border: '2px solid rgba(255,255,255,0.4)', flexShrink: 0,
-    background: 'white',
+    background: 'white', cursor: 'pointer', padding: 0,
+  },
+  qrBtn: {
+    background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)',
+    color: 'white', borderRadius: 20, padding: '6px 12px',
+    fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+    fontFamily: 'Sora, sans-serif',
   },
   nickname: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: 'white' },
   school: { fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', marginTop: 2 },
