@@ -202,7 +202,9 @@ export default function TeacherShop() {
                   <div style={{ flex: 1 }}>
                     <div style={styles.rName}>{r.student?.nickname}</div>
                     <div style={styles.rReward}>
-                      {r.reward?.image_emoji} {r.reward?.title} · {r.points_spent} แต้ม
+                      {r.reward?.image_emoji} {r.reward?.title}
+                      {r.quantity > 1 && <span style={{ color: '#6C3AF7', fontWeight: 700 }}> × {r.quantity} ชิ้น</span>}
+                      {' · '}{r.points_spent} แต้ม
                     </div>
                     <div style={styles.rTime}>
                       {new Date(r.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
