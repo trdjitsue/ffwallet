@@ -22,6 +22,7 @@ export default function StudentCourses() {
       .from('course_members')
       .select('*, course:course_id(*, teacher:teacher_id(nickname))')
       .eq('student_id', profile.id)
+      .in('status', ['pending', 'approved'])
       .order('joined_at', { ascending: false })
     setCourses(data || [])
     setLoading(false)
@@ -40,16 +41,17 @@ export default function StudentCourses() {
 
       if (error || !course) { showToast('ไม่พบรหัสคอร์ส', 'error'); return }
 
-      const alreadyJoined = courses.find(c => c.course_id === course.id)
+      const alreadyJoined = courses.find(c => c.course_id === course.id && c.status !== 'rejected')
       if (alreadyJoined) { showToast('เข้าคอร์สนี้ไปแล้ว', 'error'); return }
 
       const { error: joinError } = await supabase.from('course_members').insert({
         course_id: course.id,
         student_id: profile.id,
+        status: 'pending',
       })
       if (joinError) throw joinError
 
-      showToast(`เข้าร่วม "${course.title}" สำเร็จ! 🎉`, 'success')
+      showToast(`ส่งคำขอเข้าร่วม "${course.title}" แล้ว! รออาจารย์อนุมัติ 🎉`, 'success')
       setJoinCode('')
       fetchCourses()
     } catch { showToast('เกิดข้อผิดพลาด', 'error') }
@@ -113,8 +115,9 @@ export default function StudentCourses() {
             <p>ยังไม่ได้เข้าร่วมคอร์สไหน<br />ใส่รหัสจากครูด้านบน</p>
           </div>
         ) : courses.map(m => (
-          <div key={m.id} style={styles.courseCard}
-            onClick={async () => { setSelectedCourse(m.course); await fetchClassmates(m.course_id) }}>
+          <div key={m.id}
+            style={{ ...styles.courseCard, opacity: m.status === 'pending' ? 0.7 : 1 }}
+            onClick={m.status === 'approved' ? async () => { setSelectedCourse(m.course); await fetchClassmates(m.course_id) } : undefined}>
             <div style={styles.courseIcon}>📚</div>
             <div style={styles.courseInfo}>
               <div style={styles.courseTitle}>{m.course?.title}</div>
@@ -122,8 +125,11 @@ export default function StudentCourses() {
                 👤 {m.course?.teacher?.nickname}
                 {m.course?.description && ` · ${m.course.description}`}
               </div>
+              {m.status === 'pending' && (
+                <div style={styles.pendingBadge}>⏳ รออาจารย์อนุมัติ</div>
+              )}
             </div>
-            <div style={styles.arrow}>›</div>
+            {m.status === 'approved' && <div style={styles.arrow}>›</div>}
           </div>
         ))}
       </div>
@@ -211,6 +217,11 @@ const styles = {
   courseTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#1A1A2E' },
   courseMeta: { fontSize: '0.75rem', color: '#9898AD', marginTop: 3 },
   arrow: { fontSize: '1.4rem', color: '#D0D0DC', flexShrink: 0 },
+  pendingBadge: {
+    fontSize: '0.7rem', color: '#8a6500', background: '#FFF9E0',
+    borderRadius: 10, padding: '2px 8px', fontWeight: 700,
+    marginTop: 4, display: 'inline-block',
+  },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
   modalTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '1.2rem', color: '#1A1A2E' },
   modalSub: { fontSize: '0.78rem', color: '#9898AD', marginTop: 4 },

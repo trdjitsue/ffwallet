@@ -23,20 +23,29 @@ export default function TeacherCourseDetail() {
   const [bulkMode, setBulkMode] = useState(false)
   const [bulkSelected, setBulkSelected] = useState([])
   const [submittingBulk, setSubmittingBulk] = useState(false)
+  const [pendingMembers, setPendingMembers] = useState([])
+  const [approvingId, setApprovingId] = useState(null)
   const [confirmRemove, setConfirmRemove] = useState(null) // member object to remove
 
   useEffect(() => { fetchData() }, [id])
 
   async function fetchData() {
-    const [courseRes, membersRes] = await Promise.all([
+    const [courseRes, membersRes, pendingRes] = await Promise.all([
       supabase.from('courses').select('*').eq('id', id).single(),
       supabase.from('course_members')
         .select('*, student:student_id(*)')
         .eq('course_id', id)
+        .eq('status', 'approved')
+        .order('joined_at'),
+      supabase.from('course_members')
+        .select('*, student:student_id(*)')
+        .eq('course_id', id)
+        .eq('status', 'pending')
         .order('joined_at'),
     ])
     setCourse(courseRes.data)
     setMembers(membersRes.data || [])
+    setPendingMembers(pendingRes.data || [])
     setLoading(false)
   }
 
@@ -182,6 +191,43 @@ export default function TeacherCourseDetail() {
               : `⚡ ให้แต้ม ${bulkSelected.length} คน`
             }
           </button>
+        </div>
+      )}
+
+      {/* Pending Requests */}
+      {pendingMembers.length > 0 && (
+        <div style={{ margin: '10px 16px 0', background: '#FFF9E0', borderRadius: 14, padding: '14px', border: '2px solid #F5C842' }}>
+          <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: '#8a6500', marginBottom: 10 }}>
+            ⏳ รอการอนุมัติ ({pendingMembers.length} คน)
+          </div>
+          {pendingMembers.map(m => {
+            const s = m.student
+            return (
+              <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #FFF0B0' }}>
+                <div style={{ width: 34, height: 34, borderRadius: '50%', background: s?.avatar_color || '#6C3AF7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 800, color: 'white', flexShrink: 0 }}>
+                  {s?.nickname?.[0]?.toUpperCase()}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.88rem', color: '#1A1A2E' }}>{s?.nickname}</div>
+                  <div style={{ fontSize: '0.72rem', color: '#9898AD' }}>{s?.first_name} {s?.last_name}</div>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#FFE5E5', color: '#C53030', fontFamily: 'Sora', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer' }}
+                    onClick={() => approveMember(m.id, false)}
+                    disabled={approvingId === m.id}
+                  >❌</button>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => approveMember(m.id, true)}
+                    disabled={approvingId === m.id}
+                  >
+                    {approvingId === m.id ? <span className="spinner" /> : '✅ อนุมัติ'}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
