@@ -33,7 +33,7 @@ export default function TeacherShop() {
     const [rewardsRes, redemptionsRes] = await Promise.all([
       supabase.from('rewards').select('*').order('points_cost'),
       supabase.from('redemptions')
-        .select('*, student:student_id(nickname, avatar_color, first_name, last_name), reward:reward_id(title, image_emoji)')
+        .select('*, student:student_id(nickname, avatar_color, first_name, last_name), reward:reward_id(title, image_emoji, points_cost)')
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
     ])
@@ -265,6 +265,9 @@ export default function TeacherShop() {
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#9898AD' }}>
                         {r.student?.first_name} {r.student?.last_name} · {new Date(r.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#6C3AF7', marginTop: 2 }}>
+                        {r.quantity > 1 ? `${r.quantity} ชิ้น × ${r.reward?.points_cost} = ${r.points_spent} แต้ม` : `${r.points_spent} แต้ม`}
                       </div>
                     </div>
                     <div style={{
