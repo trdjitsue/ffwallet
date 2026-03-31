@@ -108,6 +108,19 @@ export default function TeacherCourseDetail() {
     setBulkSelected(members.map(m => m.student_id))
   }
 
+  async function approveMember(memberId, approve) {
+    if (approvingId === memberId) return
+    setApprovingId(memberId)
+    try {
+      const status = approve ? 'approved' : 'rejected'
+      const { error } = await supabase.from('course_members').update({ status }).eq('id', memberId)
+      if (error) throw error
+      showToast(approve ? '✅ อนุมัติแล้ว' : '❌ ปฏิเสธแล้ว', approve ? 'success' : 'info')
+      fetchData()
+    } catch { showToast('เกิดข้อผิดพลาด', 'error') }
+    finally { setApprovingId(null) }
+  }
+
   async function removeMember(member) {
     setConfirmRemove(member)
   }
