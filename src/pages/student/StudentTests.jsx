@@ -14,6 +14,7 @@ export default function StudentTests() {
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
   const [activeTest, setActiveTest] = useState(null)
+  const [failedAttempts, setFailedAttempts] = useState([]) // test_ids that student failed
 
   useEffect(() => {
     fetchData()
@@ -34,7 +35,7 @@ export default function StudentTests() {
   }, [profile?.id])
 
   async function fetchData() {
-    const [testsRes, myCompRes] = await Promise.all([
+    const [testsRes, myCompRes, attemptsRes] = await Promise.all([
       supabase
         .from('tests')
         .select('*, teacher:teacher_id(nickname)')
@@ -44,10 +45,16 @@ export default function StudentTests() {
         .from('test_completions')
         .select('test_id')
         .eq('student_id', profile.id),
+      supabase
+        .from('test_attempts')
+        .select('test_id')
+        .eq('student_id', profile.id)
+        .eq('success', false),
     ])
     const testsData = testsRes.data || []
     setTests(testsData)
     setCompletions((myCompRes.data || []).map(c => c.test_id))
+    setFailedAttempts((attemptsRes.data || []).map(a => a.test_id))
 
     // await fetchCounts before setting loading false
     if (testsData.length) await fetchCounts(testsData.map(t => t.id))
@@ -99,7 +106,17 @@ export default function StudentTests() {
   async function handleComplete() {
     if (!activeTest) return
     if (joinCode.trim().toUpperCase() !== activeTest.join_code) {
-      showToast('รหัสไม่ถูกต้อง ❌', 'error'); return
+      // Save failed attempt to DB permanently
+      await supabase.from('test_attempts').upsert({
+        test_id: activeTest.id,
+        student_id: profile.id,
+        success: false,
+      }, { onConflict: 'test_id,student_id' })
+      setFailedAttempts(prev => [...prev, activeTest.id])
+      setActiveTest(null)
+      setJoinCode('')
+      showToast('รหัสไม่ถูกต้อง ❌ ส่งได้แค่ครั้งเดียวเท่านั้น', 'error')
+      return
     }
 
     // Double check max_participants
@@ -193,7 +210,7 @@ export default function StudentTests() {
               return (
                 <div key={test.id} style={{
                   ...styles.testCard,
-                  ...(done || isFull ? styles.testDone : {}),
+                  ...(done || isFull || failedAttempts.includes(test.id) ? styles.testDone : {}),
                 }}>
                   <div style={styles.testInfo}>
                     <div style={styles.testTitle}>{test.title}</div>
@@ -227,6 +244,8 @@ export default function StudentTests() {
                     <div style={styles.testPointsLabel}>แต้ม</div>
                     {done ? (
                       <span style={styles.doneBadge}>✅ เสร็จแล้ว</span>
+                    ) : failedAttempts.includes(test.id) ? (
+                      <span style={styles.failedBadge}>❌ ส่งแล้ว</span>
                     ) : isFull ? (
                       <span style={styles.fullBadge}>🔴 เต็ม</span>
                     ) : (
@@ -273,7 +292,10 @@ export default function StudentTests() {
               </div>
             )}
 
-            <div className="input-group" style={{ marginTop: 16 }}>
+            <div style={{ background: '#FFF9E0', borderRadius: 10, padding: '10px 14px', fontSize: '0.78rem', color: '#8a6500', fontWeight: 600, marginTop: 12 }}>
+              ⚠️ ส่งได้แค่ครั้งเดียว ถ้ากรอกรหัสผิดจะไม่สามารถส่งซ้ำได้
+            </div>
+            <div className="input-group" style={{ marginTop: 12 }}>
               <label className="input-label">กรอกรหัสกิจกรรม</label>
               <input
                 className="input"
@@ -292,7 +314,7 @@ export default function StudentTests() {
               <button className="btn btn-gold" style={{ flex: 2 }}
                 onClick={handleComplete}
                 disabled={joining || !joinCode.trim()}>
-                {joining ? <><span className="spinner" /> กำลังบันทึก...</> : '✅ ทำเสร็จแล้ว!'}
+                {joining ? <><span className="spinner" /> กำลังตรวจสอบ...</> : '✅ ยืนยันรหัสผ่าน'}
               </button>
             </div>
           </div>
@@ -358,6 +380,7 @@ const styles = {
   testPointsLabel: { fontSize: '0.65rem', color: '#9898AD' },
   doneBadge: { fontSize: '0.7rem', color: '#007A5A', background: '#D0FFF4', borderRadius: 10, padding: '3px 8px', fontWeight: 700, marginTop: 4 },
   fullBadge: { fontSize: '0.7rem', color: '#C53030', background: '#FFE5E5', borderRadius: 10, padding: '3px 8px', fontWeight: 700, marginTop: 4 },
+  failedBadge: { fontSize: '0.7rem', color: '#6E6E88', background: '#F4F4F6', borderRadius: 10, padding: '3px 8px', fontWeight: 700, marginTop: 4 },
   modalTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '1.3rem', color: '#1A1A2E', marginBottom: 8 },
   modalDesc: { fontSize: '0.85rem', color: '#6E6E88' },
   rewardRow: {
