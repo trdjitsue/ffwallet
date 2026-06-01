@@ -111,12 +111,7 @@ export default function StudentTournament() {
         <div style={styles.pointsChip}>💰 {profile?.points || 0}</div>
       </div>
 
-      <div style={styles.hero}>
-        <div style={styles.heroGlow} />
-        <div style={styles.heroTrophy}>🏆</div>
-        <div style={styles.heroTitle}>การแข่งขัน</div>
-        <div style={styles.heroSub}>ร่วมแข่งขัน ชิงความเป็นหนึ่ง</div>
-      </div>
+
 
       <div style={styles.content}>
         {loading ? (
