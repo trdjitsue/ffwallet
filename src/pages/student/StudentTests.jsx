@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import { Toast, useToast } from '../../hooks/useToast'
@@ -319,11 +320,12 @@ export default function StudentTests() {
         </div>
       )}
 
-      {zoomImage && (
+      {zoomImage && createPortal(
         <div style={styles.zoomOverlay} onClick={() => setZoomImage(null)}>
           <button style={styles.zoomClose} onClick={() => setZoomImage(null)}>✕</button>
           <img src={zoomImage} alt="" style={styles.zoomImg} onClick={e => e.stopPropagation()} />
-        </div>
+        </div>,
+        document.body
       )}
 
       <div style={{ height: 80 }} />
@@ -379,7 +381,7 @@ const styles = {
     cursor: 'pointer', fontFamily: 'Noto Sans Thai, sans-serif',
   },
   zoomOverlay: {
-    position: 'fixed', inset: 0, zIndex: 999,
+    position: 'fixed', inset: 0, zIndex: 99999,
     background: 'rgba(0,0,0,0.92)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     padding: 16,
@@ -388,7 +390,7 @@ const styles = {
     position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', right: 16,
     width: 44, height: 44, borderRadius: '50%',
     background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none',
-    fontSize: '1.3rem', cursor: 'pointer', zIndex: 1000,
+    fontSize: '1.3rem', cursor: 'pointer', zIndex: 100000,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   zoomImg: {
