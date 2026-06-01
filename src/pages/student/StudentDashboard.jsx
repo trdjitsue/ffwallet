@@ -95,6 +95,15 @@ export default function StudentDashboard() {
         <div style={styles.scoreUnit}>คะแนน</div>
       </div>
 
+      <button onClick={() => navigate('/student/tournament')} style={styles.tournamentCard}>
+        <div style={styles.tournamentLeft}>
+          <div style={styles.tournamentBadge}>เร็วๆ นี้</div>
+          <div style={styles.tournamentTitle}>FF Tournament</div>
+          <div style={styles.tournamentSub}>แตะเพื่อเข้าร่วม →</div>
+        </div>
+        <div style={styles.tournamentEmoji}>🏆</div>
+      </button>
+
       <div style={styles.section}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={styles.sectionTitle}>ประวัติล่าสุด</div>
@@ -201,11 +210,13 @@ const styles = {
   section: { padding: '16px' },
   tournamentCard: {
     margin: '0 16px 16px',
+    width: 'calc(100% - 32px)',
     background: 'linear-gradient(135deg, #1A0760 0%, #4519C9 60%, #6C3AF7 100%)',
     borderRadius: 20, padding: '20px',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     boxShadow: '0 8px 24px rgba(26,7,96,0.3)',
     position: 'relative', overflow: 'hidden',
+    border: 'none', cursor: 'pointer', textAlign: 'left',
   },
   tournamentLeft: { display: 'flex', flexDirection: 'column', gap: 4 },
   tournamentBadge: {

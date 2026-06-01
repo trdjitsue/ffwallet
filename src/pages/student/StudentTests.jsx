@@ -9,17 +9,17 @@ export default function StudentTests() {
   const { toast, showToast } = useToast()
   const [joinCode, setJoinCode] = useState('')
   const [tests, setTests] = useState([])
-  const [completions, setCompletions] = useState([]) // test_ids student completed
-  const [completionCounts, setCompletionCounts] = useState({}) // { test_id: count }
+  const [completions, setCompletions] = useState([])
+  const [completionCounts, setCompletionCounts] = useState({})
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
   const [activeTest, setActiveTest] = useState(null)
-  const [failedAttempts, setFailedAttempts] = useState([]) // test_ids that student failed
+  const [failedAttempts, setFailedAttempts] = useState([])
+  const [zoomImage, setZoomImage] = useState(null)
 
   useEffect(() => {
     fetchData()
 
-    // Realtime: update counts when anyone completes a test
     const channel = supabase
       .channel('test-completions-realtime')
       .on('postgres_changes', {
@@ -56,7 +56,6 @@ export default function StudentTests() {
     setCompletions((myCompRes.data || []).map(c => c.test_id))
     setFailedAttempts((attemptsRes.data || []).map(a => a.test_id))
 
-    // await fetchCounts before setting loading false
     if (testsData.length) await fetchCounts(testsData.map(t => t.id))
     setLoading(false)
   }
@@ -72,7 +71,6 @@ export default function StudentTests() {
     ;(data || []).forEach(c => {
       counts[c.test_id] = (counts[c.test_id] || 0) + 1
     })
-    // Set 0 for tests with no completions too
     ids.forEach(id => { if (!counts[id]) counts[id] = 0 })
     setCompletionCounts(counts)
   }
@@ -91,7 +89,6 @@ export default function StudentTests() {
       if (error || !test) { showToast('ไม่พบรหัสกิจกรรม', 'error'); return }
       if (completions.includes(test.id)) { showToast('ทำกิจกรรมนี้ไปแล้ว', 'error'); return }
 
-      // Check max_participants
       const count = completionCounts[test.id] || 0
       if (test.max_participants !== -1 && count >= test.max_participants) {
         showToast('กิจกรรมนี้เต็มแล้ว', 'error'); return
@@ -106,7 +103,6 @@ export default function StudentTests() {
   async function handleComplete() {
     if (!activeTest) return
     if (joinCode.trim().toUpperCase() !== activeTest.join_code) {
-      // Save failed attempt to DB permanently
       await supabase.from('test_attempts').upsert({
         test_id: activeTest.id,
         student_id: profile.id,
@@ -119,7 +115,6 @@ export default function StudentTests() {
       return
     }
 
-    // Double check max_participants
     const count = completionCounts[activeTest.id] || 0
     if (activeTest.max_participants !== -1 && count >= activeTest.max_participants) {
       showToast('กิจกรรมนี้เต็มแล้ว 😢', 'error')
@@ -171,7 +166,6 @@ export default function StudentTests() {
         <div style={styles.pointsChip}>💰 {profile?.points || 0}</div>
       </div>
 
-      {/* Join Code Input */}
       <div style={styles.joinCard}>
         <div style={styles.joinTitle}>มีรหัสกิจกรรม?</div>
         <div style={styles.joinRow}>
@@ -189,7 +183,6 @@ export default function StudentTests() {
         </div>
       </div>
 
-      {/* Active Tests List */}
       <div style={styles.section}>
         <div style={styles.sectionTitle}>กิจกรรมที่เปิดอยู่</div>
         {loading ? (
@@ -212,12 +205,12 @@ export default function StudentTests() {
                   ...styles.testCard,
                   ...(done || isFull || failedAttempts.includes(test.id) ? styles.testDone : {}),
                 }}>
+                  {test.image_url && <img src={test.image_url} alt="" style={styles.cardThumb} />}
                   <div style={styles.testInfo}>
                     <div style={styles.testTitle}>{test.title}</div>
                     {test.description && <div style={styles.testDesc}>{test.description}</div>}
                     <div style={styles.testMeta}>
                       <span style={styles.testTeacher}>👤 {test.teacher?.nickname}</span>
-                      {/* Realtime slot display */}
                       {test.max_participants !== -1 && test.max_participants != null && (
                         <span style={{
                           ...styles.slotChip,
@@ -228,7 +221,6 @@ export default function StudentTests() {
                         </span>
                       )}
                     </div>
-                    {/* Progress bar for limited tests */}
                     {test.max_participants !== -1 && test.max_participants != null && (
                       <div style={styles.progressBar}>
                         <div style={{
@@ -265,13 +257,19 @@ export default function StudentTests() {
         )}
       </div>
 
-      {/* Confirm Modal with code input */}
       {activeTest && (
         <div className="modal-overlay" onClick={() => { setActiveTest(null); setJoinCode('') }}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '90dvh', overflowY: 'auto' }}>
             <div className="modal-handle" />
+            {activeTest.image_url && (
+              <div style={{ position: 'relative' }}>
+                <img src={activeTest.image_url} alt="" style={styles.modalImage}
+                  onClick={() => setZoomImage(activeTest.image_url)} />
+                <button style={styles.zoomHint} onClick={() => setZoomImage(activeTest.image_url)}>🔍 แตะเพื่อขยาย</button>
+              </div>
+            )}
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎯</div>
+              {!activeTest.image_url && <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎯</div>}
               <h2 style={styles.modalTitle}>{activeTest.title}</h2>
               {activeTest.description && <p style={styles.modalDesc}>{activeTest.description}</p>}
             </div>
@@ -321,6 +319,13 @@ export default function StudentTests() {
         </div>
       )}
 
+      {zoomImage && (
+        <div style={styles.zoomOverlay} onClick={() => setZoomImage(null)}>
+          <button style={styles.zoomClose} onClick={() => setZoomImage(null)}>✕</button>
+          <img src={zoomImage} alt="" style={styles.zoomImg} onClick={e => e.stopPropagation()} />
+        </div>
+      )}
+
       <div style={{ height: 80 }} />
       <BottomNav role="student" />
     </div>
@@ -358,6 +363,37 @@ const styles = {
     transition: 'all 0.2s',
   },
   testDone: { opacity: 0.7, background: '#FAFAFA' },
+  cardThumb: {
+    width: 48, height: 48, borderRadius: 10, objectFit: 'cover', flexShrink: 0,
+    border: '1px solid rgba(108,58,247,0.1)',
+  },
+  modalImage: {
+    width: '100%', maxHeight: 200, objectFit: 'cover',
+    borderRadius: 14, marginBottom: 16, border: '1px solid rgba(108,58,247,0.1)',
+    cursor: 'pointer',
+  },
+  zoomHint: {
+    position: 'absolute', bottom: 24, right: 8,
+    background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none',
+    borderRadius: 20, padding: '5px 12px', fontSize: '0.72rem', fontWeight: 600,
+    cursor: 'pointer', fontFamily: 'Noto Sans Thai, sans-serif',
+  },
+  zoomOverlay: {
+    position: 'fixed', inset: 0, zIndex: 999,
+    background: 'rgba(0,0,0,0.92)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: 16,
+  },
+  zoomClose: {
+    position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', right: 16,
+    width: 44, height: 44, borderRadius: '50%',
+    background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none',
+    fontSize: '1.3rem', cursor: 'pointer', zIndex: 1000,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  zoomImg: {
+    maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8,
+  },
   testInfo: { flex: 1, minWidth: 0 },
   testTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: '#1A1A2E' },
   testDesc: { fontSize: '0.78rem', color: '#9898AD', marginTop: 2 },

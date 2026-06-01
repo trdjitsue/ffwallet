@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import { Toast, useToast } from '../../hooks/useToast'
@@ -8,7 +8,7 @@ function randomCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
-const emptyForm = { title: '', description: '', join_code: randomCode(), points_reward: 10, max_participants: -1 }
+const emptyForm = { title: '', description: '', join_code: randomCode(), points_reward: 10, max_participants: -1, image_url: '' }
 
 export default function TeacherTests() {
   const { profile } = useAuth()
@@ -19,8 +19,10 @@ export default function TeacherTests() {
   const [editTarget, setEditTarget] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [selected, setSelected] = useState(null)
   const [completions, setCompletions] = useState([])
+  const fileInputRef = useRef(null)
 
   useEffect(() => { fetchTests() }, [])
 
@@ -58,8 +60,35 @@ export default function TeacherTests() {
       join_code: test.join_code,
       points_reward: test.points_reward,
       max_participants: test.max_participants ?? -1,
+      image_url: test.image_url || '',
     })
     setShowCreate(true)
+  }
+
+  async function handleImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { showToast('กรุณาเลือกไฟล์รูปภาพ', 'error'); return }
+    if (file.size > 5 * 1024 * 1024) { showToast('รูปต้องไม่เกิน 5MB', 'error'); return }
+
+    setUploading(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const fileName = `${profile.id}-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('test-images')
+        .upload(fileName, file, { upsert: false })
+      if (upErr) throw upErr
+
+      const { data: urlData } = supabase.storage.from('test-images').getPublicUrl(fileName)
+      setForm(f => ({ ...f, image_url: urlData.publicUrl }))
+      showToast('อัปโหลดรูปสำเร็จ!', 'success')
+    } catch {
+      showToast('อัปโหลดรูปไม่สำเร็จ', 'error')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
   }
 
   async function handleSave() {
@@ -73,6 +102,7 @@ export default function TeacherTests() {
           join_code: form.join_code.toUpperCase(),
           points_reward: parseInt(form.points_reward) || 10,
           max_participants: parseInt(form.max_participants) || -1,
+          image_url: form.image_url || null,
         }).eq('id', editTarget.id)
         if (error) throw error
         showToast('แก้ไขกิจกรรมสำเร็จ!', 'success')
@@ -83,6 +113,7 @@ export default function TeacherTests() {
           join_code: form.join_code.toUpperCase(),
           points_reward: parseInt(form.points_reward) || 10,
           max_participants: parseInt(form.max_participants) || -1,
+          image_url: form.image_url || null,
           teacher_id: profile.id,
           is_active: true,
         })
@@ -145,7 +176,7 @@ export default function TeacherTests() {
       {/* Create / Edit Modal */}
       {showCreate && (
         <div className="modal-overlay" onClick={() => setShowCreate(false)}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '90dvh', overflowY: 'auto' }}>
             <div className="modal-handle" />
             <h2 style={styles.modalTitle}>
               {editTarget ? '✏️ แก้ไขกิจกรรม' : '➕ สร้างกิจกรรมใหม่'}
@@ -157,6 +188,26 @@ export default function TeacherTests() {
                 <input className="input" placeholder="เช่น แบบทดสอบบทที่ 3"
                   value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
               </div>
+
+              {/* Image upload */}
+              <div className="input-group">
+                <label className="input-label">รูปกิจกรรม (ไม่บังคับ)</label>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+                {form.image_url ? (
+                  <div style={styles.imagePreviewWrap}>
+                    <img src={form.image_url} alt="preview" style={styles.imagePreview} />
+                    <button style={styles.removeImageBtn}
+                      onClick={() => setForm(f => ({ ...f, image_url: '' }))}>✕ ลบรูป</button>
+                  </div>
+                ) : (
+                  <button style={styles.uploadBtn}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}>
+                    {uploading ? <><span className="spinner" /> กำลังอัปโหลด...</> : '📷 เลือกรูปภาพ'}
+                  </button>
+                )}
+              </div>
+
               <div className="input-group">
                 <label className="input-label">คำอธิบาย</label>
                 <input className="input" placeholder="รายละเอียดเพิ่มเติม"
@@ -197,7 +248,7 @@ export default function TeacherTests() {
 
             <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowCreate(false)}>ยกเลิก</button>
-              <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSave} disabled={saving}>
+              <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSave} disabled={saving || uploading}>
                 {saving ? <><span className="spinner" /> กำลังบันทึก...</> : editTarget ? '💾 บันทึกการแก้ไข' : '✨ สร้างกิจกรรม'}
               </button>
             </div>
@@ -264,6 +315,7 @@ function TestCard({ test, showTeacher, onToggle, onEdit, onView }) {
   const maxP = test.max_participants
   return (
     <div style={{ ...styles.testCard, opacity: test.is_active ? 1 : 0.6 }}>
+      {test.image_url && <img src={test.image_url} alt="" style={styles.cardThumb} />}
       <div style={styles.testMain}>
         <div style={styles.testTitle}>{test.title}</div>
         {test.description && <div style={styles.testDesc}>{test.description}</div>}
@@ -304,6 +356,10 @@ const styles = {
     display: 'flex', alignItems: 'center', gap: 12,
     animation: 'fadeIn 0.3s ease',
   },
+  cardThumb: {
+    width: 48, height: 48, borderRadius: 10, objectFit: 'cover', flexShrink: 0,
+    border: '1px solid rgba(108,58,247,0.1)',
+  },
   testMain: { flex: 1, minWidth: 0 },
   testTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: '#1A1A2E' },
   testDesc: { fontSize: '0.75rem', color: '#9898AD', marginTop: 2 },
@@ -325,6 +381,20 @@ const styles = {
   },
   toggleBtn: { background: '#F4F4F6', border: 'none', color: '#6E6E88', fontFamily: 'Sora, sans-serif', fontWeight: 600 },
   refreshBtn: { padding: '0 10px', borderRadius: 8, border: '2px solid #E8E8EF', background: 'white', cursor: 'pointer', fontSize: '1rem' },
+  uploadBtn: {
+    width: '100%', padding: '12px', borderRadius: 12,
+    border: '2px dashed #C9B8F5', background: '#F8F5FF', color: '#6C3AF7',
+    fontFamily: 'Sora, sans-serif', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  imagePreviewWrap: { position: 'relative', borderRadius: 12, overflow: 'hidden' },
+  imagePreview: { width: '100%', maxHeight: 180, objectFit: 'cover', display: 'block', borderRadius: 12 },
+  removeImageBtn: {
+    position: 'absolute', top: 8, right: 8,
+    background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none',
+    borderRadius: 20, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+    fontFamily: 'Noto Sans Thai, sans-serif',
+  },
   modalTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '1.2rem', color: '#1A1A2E' },
   testDetailHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 12 },
   codeDisplay: { fontSize: '0.8rem', color: '#9898AD', marginTop: 4 },

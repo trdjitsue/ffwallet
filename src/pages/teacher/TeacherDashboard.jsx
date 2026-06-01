@@ -72,6 +72,7 @@ export default function TeacherDashboard() {
           <QuickAction href="/teacher/courses" icon="📚" label="คอร์ส" sub="จัดการห้องเรียน" color="#9B72FF" />
           <QuickAction href="/teacher/tests" icon="📝" label="กิจกรรม" sub="สร้าง & จัดการ" color="#00D9A3" />
           <QuickAction href="/teacher/ranking" icon="🏆" label="อันดับ" sub="ดูคะแนนทุกคน" color="#F5C842" />
+          <QuickAction href="/teacher/tournaments" icon="🏆" label="Tournament" sub="สร้าง & จัดการ" color="#FF6B6B" />
         </div>
       </div>
 
