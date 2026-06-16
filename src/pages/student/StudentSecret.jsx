@@ -12,7 +12,7 @@ export default function StudentSecret() {
   const { profile, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const { toast, showToast } = useToast()
-  const [unlocked, setUnlocked] = useState(false)
+  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem('ff_secret_unlocked') === '1')
   const [codeInput, setCodeInput] = useState('')
   const [secretPoints, setSecretPoints] = useState(profile?.secret_points || 0)
   const [showQR, setShowQR] = useState(false)
@@ -20,16 +20,33 @@ export default function StudentSecret() {
   const [transferAmount, setTransferAmount] = useState('')
   const [transferring, setTransferring] = useState(false)
 
+  // Once unlocked: fetch points, poll every 3s, and subscribe to realtime updates
   useEffect(() => {
-    if (unlocked) refreshSecretPoints()
-  }, [unlocked])
+    if (!unlocked || !profile?.id) return
 
-  // Poll secret points while QR is shown (teacher may scan)
-  useEffect(() => {
-    if (!showQR) return
+    refreshSecretPoints()
+
     const interval = setInterval(refreshSecretPoints, 3000)
-    return () => clearInterval(interval)
-  }, [showQR])
+
+    const channel = supabase
+      .channel('secret-points-' + profile.id)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${profile.id}`,
+      }, (payload) => {
+        if (payload.new && typeof payload.new.secret_points === 'number') {
+          setSecretPoints(payload.new.secret_points)
+        }
+      })
+      .subscribe()
+
+    return () => {
+      clearInterval(interval)
+      supabase.removeChannel(channel)
+    }
+  }, [unlocked, profile?.id])
 
   async function refreshSecretPoints() {
     const { data } = await supabase.from('profiles').select('secret_points').eq('id', profile.id).single()
@@ -39,6 +56,7 @@ export default function StudentSecret() {
   function handleUnlock() {
     if (codeInput.trim().toUpperCase() === SECRET_CODE) {
       setUnlocked(true)
+      sessionStorage.setItem('ff_secret_unlocked', '1')
       showToast('ปลดล็อกสำเร็จ! 🎉', 'success')
     } else {
       showToast('รหัสไม่ถูกต้อง ❌', 'error')
@@ -53,11 +71,18 @@ export default function StudentSecret() {
 
     setTransferring(true)
     try {
-      const newBalance = secretPoints - amount
-      const { error } = await supabase.from('profiles')
-        .update({ secret_points: newBalance })
-        .eq('id', profile.id)
+      const { data: newBalance, error } = await supabase.rpc('deduct_secret_points', {
+        target_id: profile.id,
+        amount: amount,
+      })
       if (error) throw error
+      if (newBalance === -1) {
+        // RPC signals insufficient balance
+        await refreshSecretPoints()
+        showToast('แต้มไม่พอ 😢', 'error')
+        setTransferring(false)
+        return
+      }
       setSecretPoints(newBalance)
       setTransferAmount('')
       setShowTransfer(false)

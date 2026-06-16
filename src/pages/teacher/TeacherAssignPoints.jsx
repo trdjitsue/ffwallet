@@ -95,11 +95,12 @@ export default function TeacherAssignPoints() {
     setSubmitting(true)
     try {
       if (isSecret) {
-        const { data: cur } = await supabase.from('profiles').select('secret_points').eq('id', selected.id).single()
-        const newBalance = (cur?.secret_points || 0) + pts
-        const { error } = await supabase.from('profiles').update({ secret_points: newBalance }).eq('id', selected.id)
+        const { data: newTotal, error } = await supabase.rpc('add_secret_points', {
+          target_id: selected.id,
+          amount: pts,
+        })
         if (error) throw error
-        showToast(`✅ ให้ ${pts} แต้มลับแก่ ${selected.nickname} สำเร็จ!`, 'success')
+        showToast(`✅ ให้ ${pts} แต้มลับแก่ ${selected.nickname} สำเร็จ! (รวม ${newTotal})`, 'success')
       } else {
         const { error } = await supabase.from('point_transactions').insert({
           student_id: selected.id,
