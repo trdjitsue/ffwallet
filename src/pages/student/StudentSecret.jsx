@@ -19,7 +19,6 @@ export default function StudentSecret() {
   const [showTransfer, setShowTransfer] = useState(false)
   const [transferAmount, setTransferAmount] = useState('')
   const [transferring, setTransferring] = useState(false)
-  const [debug, setDebug] = useState('')
 
   // Once unlocked: fetch points, poll every 3s, and subscribe to realtime updates
   useEffect(() => {
@@ -50,17 +49,12 @@ export default function StudentSecret() {
   }, [unlocked, profile?.id])
 
   async function refreshSecretPoints() {
-    const rpc = await supabase.rpc('get_secret_points', { target_id: profile.id })
-    const sel = await supabase.from('profiles').select('secret_points').eq('id', profile.id).single()
-    setDebug(
-      `myID=${profile.id?.slice(0,8)} | ` +
-      `RPC=${JSON.stringify(rpc.data)} err=${rpc.error?.message || '-'} | ` +
-      `SELECT=${JSON.stringify(sel.data)} err=${sel.error?.message || '-'}`
-    )
-    if (!rpc.error && rpc.data !== null && rpc.data !== undefined) {
-      setSecretPoints(rpc.data)
-    } else if (sel.data) {
-      setSecretPoints(sel.data.secret_points || 0)
+    const { data, error } = await supabase.rpc('get_secret_points', { target_id: profile.id })
+    if (!error && data !== null && data !== undefined) {
+      setSecretPoints(data)
+    } else {
+      const { data: row } = await supabase.from('profiles').select('secret_points').eq('id', profile.id).single()
+      if (row) setSecretPoints(row.secret_points || 0)
     }
   }
 
@@ -98,8 +92,8 @@ export default function StudentSecret() {
       setTransferAmount('')
       setShowTransfer(false)
       showToast(`โอน ${amount} แต้มสำเร็จ! ✅`, 'success')
-    } catch {
-      showToast('เกิดข้อผิดพลาด', 'error')
+    } catch (err) {
+      showToast('ผิดพลาด: ' + (err?.message || 'unknown'), 'error')
     } finally {
       setTransferring(false)
     }
@@ -162,12 +156,6 @@ export default function StudentSecret() {
         <div style={styles.balanceLabel}>แต้มกิจกรรมลับ</div>
         <div style={styles.balanceBig}>{secretPoints.toLocaleString()}</div>
         <div style={styles.balanceUnit}>แต้ม</div>
-      </div>
-
-      {/* DEBUG BOX - remove later */}
-      <div style={{ margin: '0 16px 12px', padding: 10, background: '#1A1A2E', color: '#0F0', borderRadius: 10, fontSize: 10, fontFamily: 'monospace', wordBreak: 'break-all' }}>
-        {debug || 'no debug yet'}
-        <button onClick={refreshSecretPoints} style={{ display: 'block', marginTop: 6, padding: '6px 10px', background: '#F5C842', color: '#1A1A2E', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer' }}>🔄 ทดสอบดึงแต้ม</button>
       </div>
 
       {/* Action buttons */}

@@ -99,13 +99,13 @@ export default function TeacherAssignPoints() {
           target_id: selected.id,
           amount: pts,
         })
-        // DEBUG - show exactly what came back
-        showToast(`DBG id=${selected.id?.slice(0,8)} ret=${JSON.stringify(newTotal)} err=${error?.message || '-'}`, error ? 'error' : 'success')
         if (error) throw error
         if (newTotal === null || newTotal === undefined) {
+          showToast('ไม่พบนักเรียนใน DB (id ไม่ตรง)', 'error')
           setSubmitting(false)
           return
         }
+        showToast(`✅ ให้ ${pts} แต้มลับแก่ ${selected.nickname} สำเร็จ!`, 'success')
         showToast(`✅ ให้ ${pts} แต้มลับ! ตอนนี้รวม ${newTotal} แต้ม`, 'success')
       } else {
         const { error } = await supabase.from('point_transactions').insert({
