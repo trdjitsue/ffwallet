@@ -19,6 +19,7 @@ export default function StudentSecret() {
   const [showTransfer, setShowTransfer] = useState(false)
   const [transferAmount, setTransferAmount] = useState('')
   const [transferring, setTransferring] = useState(false)
+  const [slip, setSlip] = useState(null)
 
   // Once unlocked: fetch points, poll every 3s, and subscribe to realtime updates
   useEffect(() => {
@@ -89,9 +90,10 @@ export default function StudentSecret() {
         return
       }
       setSecretPoints(newBalance)
+      const sentAmount = amount
       setTransferAmount('')
       setShowTransfer(false)
-      showToast(`โอน ${amount} แต้มสำเร็จ! ✅`, 'success')
+      setSlip({ amount: sentAmount, balance: newBalance, time: new Date() })
     } catch (err) {
       showToast('ผิดพลาด: ' + (err?.message || 'unknown'), 'error')
     } finally {
@@ -142,6 +144,7 @@ export default function StudentSecret() {
   return (
     <div style={styles.page}>
       <Toast toast={toast} />
+      <style>{`@keyframes slipPop { from { opacity: 0; transform: scale(0.8) translateY(20px) } to { opacity: 1; transform: scale(1) translateY(0) } }`}</style>
 
       <div style={styles.header}>
         <button onClick={() => navigate('/student')} style={styles.backBtnLight}>← กลับ</button>
@@ -229,6 +232,37 @@ export default function StudentSecret() {
         </div>
       )}
 
+      {/* Success Slip */}
+      {slip && (
+        <div style={styles.slipOverlay} onClick={() => setSlip(null)}>
+          <div style={styles.slip} onClick={e => e.stopPropagation()}>
+            <div style={styles.slipCheck}>✓</div>
+            <div style={styles.slipTitle}>โอนสำเร็จ</div>
+            <div style={styles.slipAmount}>-{slip.amount.toLocaleString()}</div>
+            <div style={styles.slipAmountUnit}>แต้ม</div>
+
+            <div style={styles.slipDivider} />
+
+            <div style={styles.slipRow}>
+              <span style={styles.slipLabel}>จาก</span>
+              <span style={styles.slipValue}>{profile.nickname}</span>
+            </div>
+            <div style={styles.slipRow}>
+              <span style={styles.slipLabel}>คงเหลือ</span>
+              <span style={styles.slipValue}>{slip.balance.toLocaleString()} แต้ม</span>
+            </div>
+            <div style={styles.slipRow}>
+              <span style={styles.slipLabel}>วันที่</span>
+              <span style={styles.slipValue}>
+                {slip.time.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })} {slip.time.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+
+            <div style={styles.slipHint}>แตะที่ไหนก็ได้เพื่อปิด</div>
+          </div>
+        </div>
+      )}
+
       <div style={{ height: 80 }} />
       <BottomNav role="student" />
     </div>
@@ -306,4 +340,31 @@ const styles = {
   qrName: { fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '1.2rem', color: '#1A1A2E' },
   qrBalance: { fontSize: '0.85rem', color: '#6E6E88', marginTop: 4 },
   notEnough: { background: '#FFE5E5', color: '#C53030', borderRadius: 10, padding: '10px 14px', fontSize: '0.82rem', fontWeight: 600, textAlign: 'center', marginTop: 10 },
+  slipOverlay: {
+    position: 'fixed', inset: 0, zIndex: 9999,
+    background: 'rgba(26,26,46,0.85)', backdropFilter: 'blur(4px)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+    animation: 'fadeIn 0.25s ease',
+  },
+  slip: {
+    background: 'white', borderRadius: 24, padding: '32px 28px',
+    width: '100%', maxWidth: 320, textAlign: 'center',
+    boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+    animation: 'slipPop 0.35s cubic-bezier(0.18,0.89,0.32,1.28)',
+  },
+  slipCheck: {
+    width: 64, height: 64, borderRadius: '50%', margin: '0 auto 16px',
+    background: 'linear-gradient(135deg, #00D9A3, #00A36C)', color: 'white',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '2rem', fontWeight: 800,
+    boxShadow: '0 8px 24px rgba(0,217,163,0.4)',
+  },
+  slipTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '1.3rem', color: '#1A1A2E' },
+  slipAmount: { fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '3rem', color: '#FF6B6B', lineHeight: 1.1, marginTop: 12 },
+  slipAmountUnit: { fontSize: '0.9rem', color: '#9898AD', marginTop: 2 },
+  slipDivider: { height: 1, background: 'repeating-linear-gradient(90deg, #E8E8EF 0, #E8E8EF 6px, transparent 6px, transparent 12px)', margin: '20px 0' },
+  slipRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0' },
+  slipLabel: { fontSize: '0.85rem', color: '#9898AD' },
+  slipValue: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.88rem', color: '#1A1A2E' },
+  slipHint: { fontSize: '0.75rem', color: '#C9C9D6', marginTop: 20 },
 }
