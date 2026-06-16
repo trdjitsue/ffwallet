@@ -13,6 +13,7 @@ import StudentQR from './pages/student/StudentQR'
 import StudentProfile from './pages/student/StudentProfile'
 import StudentCourses from './pages/student/StudentCourses'
 import StudentTournament from './pages/student/StudentTournament'
+import StudentSecret from './pages/student/StudentSecret'
 import StudentHistory from './pages/student/StudentHistory'
 
 // Teacher
@@ -82,6 +83,7 @@ export default function App() {
           <Route path="/student/qr" element={<ProtectedRoute roles={['student']}><StudentQR /></ProtectedRoute>} />
           <Route path="/student/history" element={<ProtectedRoute roles={['student']}><StudentHistory /></ProtectedRoute>} />
           <Route path="/student/tournament" element={<ProtectedRoute roles={['student']}><StudentTournament /></ProtectedRoute>} />
+          <Route path="/student/secret" element={<ProtectedRoute roles={['student']}><StudentSecret /></ProtectedRoute>} />
           <Route path="/student/courses" element={<ProtectedRoute roles={['student']}><StudentCourses /></ProtectedRoute>} />
           <Route path="/student/profile" element={<ProtectedRoute roles={['student']}><StudentProfile /></ProtectedRoute>} />
 

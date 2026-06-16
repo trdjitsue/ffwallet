@@ -104,6 +104,14 @@ export default function StudentDashboard() {
         <div style={styles.tournamentEmoji}>🏆</div>
       </button>
 
+      <button onClick={() => navigate('/student/secret')} style={styles.secretCard}>
+        <div style={styles.secretLeft}>
+          <div style={styles.secretTitle}>🔒 กิจกรรมลับ</div>
+          <div style={styles.secretSub}>แตะเพื่อปลดล็อก →</div>
+        </div>
+        <div style={styles.secretEmoji}>🎁</div>
+      </button>
+
       <div style={styles.section}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={styles.sectionTitle}>ประวัติล่าสุด</div>
@@ -238,6 +246,26 @@ const styles = {
   tournamentEmoji: {
     fontSize: '3rem', animation: 'float 3s ease infinite',
   },
+  secretCard: {
+    margin: '0 16px 16px',
+    width: 'calc(100% - 32px)',
+    background: 'linear-gradient(135deg, #1A1A2E 0%, #2D2D4A 60%, #3C3454 100%)',
+    borderRadius: 20, padding: '20px',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    boxShadow: '0 8px 24px rgba(26,26,46,0.3)',
+    position: 'relative', overflow: 'hidden',
+    border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', textAlign: 'left',
+  },
+  secretLeft: { display: 'flex', flexDirection: 'column', gap: 4 },
+  secretTitle: {
+    fontFamily: 'Sora, sans-serif', fontWeight: 800,
+    fontSize: '1.2rem', color: 'white', letterSpacing: '-0.02em',
+  },
+  secretSub: {
+    fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)',
+    fontFamily: 'Space Mono, monospace',
+  },
+  secretEmoji: { fontSize: '2.6rem' },
   sectionTitle: {
     fontFamily: 'Sora, sans-serif', fontWeight: 700,
     fontSize: '1rem', color: '#1A1A2E',

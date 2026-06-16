@@ -7,11 +7,12 @@ import BottomNav from '../../components/shared/BottomNav'
 export default function TeacherAssignPoints() {
   const { profile } = useAuth()
   const { toast, showToast } = useToast()
-  const [mode, setMode] = useState('manual') // 'manual' | 'qr'
+  const [mode, setMode] = useState('manual')
   const [search, setSearch] = useState('')
   const [students, setStudents] = useState([])
   const [searching, setSearching] = useState(false)
   const [selected, setSelected] = useState(null)
+  const [isSecret, setIsSecret] = useState(false)
   const [points, setPoints] = useState('')
   const [reason, setReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -39,7 +40,11 @@ export default function TeacherAssignPoints() {
             if (data.type === 'ff_wallet_student') {
               await stopScanner()
               setMode('manual')
-              await loadStudentById(data.id)
+              await loadStudentById(data.id, false)
+            } else if (data.type === 'ff_wallet_secret') {
+              await stopScanner()
+              setMode('manual')
+              await loadStudentById(data.id, true)
             }
           } catch { /* not our QR */ }
         },
@@ -58,9 +63,9 @@ export default function TeacherAssignPoints() {
     }
   }
 
-  async function loadStudentById(id) {
+  async function loadStudentById(id, secret) {
     const { data } = await supabase.from('profiles').select('*').eq('id', id).eq('role', 'student').single()
-    if (data) setSelected(data)
+    if (data) { setSelected(data); setIsSecret(!!secret) }
     else showToast('ไม่พบนักเรียน', 'error')
   }
 
@@ -89,17 +94,25 @@ export default function TeacherAssignPoints() {
 
     setSubmitting(true)
     try {
-      const { error } = await supabase.from('point_transactions').insert({
-        student_id: selected.id,
-        teacher_id: profile.id,
-        points: pts,
-        transaction_type: 'earn',
-        reason: reason.trim() || 'ครูให้แต้ม',
-      })
-      if (error) throw error
-
-      showToast(`✅ ให้ ${pts} แต้มแก่ ${selected.nickname} สำเร็จ!`, 'success')
+      if (isSecret) {
+        const { data: cur } = await supabase.from('profiles').select('secret_points').eq('id', selected.id).single()
+        const newBalance = (cur?.secret_points || 0) + pts
+        const { error } = await supabase.from('profiles').update({ secret_points: newBalance }).eq('id', selected.id)
+        if (error) throw error
+        showToast(`✅ ให้ ${pts} แต้มลับแก่ ${selected.nickname} สำเร็จ!`, 'success')
+      } else {
+        const { error } = await supabase.from('point_transactions').insert({
+          student_id: selected.id,
+          teacher_id: profile.id,
+          points: pts,
+          transaction_type: 'earn',
+          reason: reason.trim() || 'ครูให้แต้ม',
+        })
+        if (error) throw error
+        showToast(`✅ ให้ ${pts} แต้มแก่ ${selected.nickname} สำเร็จ!`, 'success')
+      }
       setSelected(null)
+      setIsSecret(false)
       setPoints('')
       setReason('')
       setSearch('')
@@ -115,12 +128,10 @@ export default function TeacherAssignPoints() {
     <div style={styles.page}>
       <Toast toast={toast} />
 
-      {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerTitle}>⭐ ให้แต้มนักเรียน</div>
       </div>
 
-      {/* Mode Tabs */}
       <div style={styles.tabs}>
         <button
           style={{ ...styles.tab, ...(mode === 'manual' ? styles.tabActive : {}) }}
@@ -136,7 +147,6 @@ export default function TeacherAssignPoints() {
         </button>
       </div>
 
-      {/* QR Scanner */}
       {mode === 'qr' && (
         <div style={styles.scannerWrap}>
           <div id="qr-reader" ref={scannerRef} style={styles.scanner} />
@@ -144,7 +154,6 @@ export default function TeacherAssignPoints() {
         </div>
       )}
 
-      {/* Manual Search */}
       {mode === 'manual' && !selected && (
         <div style={styles.searchWrap}>
           <div className="input-group">
@@ -163,7 +172,7 @@ export default function TeacherAssignPoints() {
           {students.length > 0 && (
             <div style={styles.resultList}>
               {students.map(s => (
-                <button key={s.id} style={styles.resultItem} onClick={() => { setSelected(s); setSearch(''); setStudents([]) }}>
+                <button key={s.id} style={styles.resultItem} onClick={() => { setSelected(s); setIsSecret(false); setSearch(''); setStudents([]) }}>
                   <div style={styles.sAvatar(s.avatar_color)}>{s.nickname?.[0]?.toUpperCase()}</div>
                   <div style={styles.sInfo}>
                     <div style={styles.sName}>{s.nickname} · {s.first_name} {s.last_name}</div>
@@ -182,21 +191,26 @@ export default function TeacherAssignPoints() {
         </div>
       )}
 
-      {/* Assign Form - after student selected */}
       {selected && (
         <div style={styles.assignWrap}>
-          {/* Student Card */}
-          <div style={styles.studentCard}>
+          {isSecret && (
+            <div style={styles.secretBanner}>🔒 โหมดกิจกรรมลับ — แต้มจะเข้าบัญชีกิจกรรมลับ</div>
+          )}
+
+          <div style={{ ...styles.studentCard, ...(isSecret ? { border: '2px solid #1A1A2E' } : {}) }}>
             <div style={styles.sAvatar(selected.avatar_color)}>{selected.nickname?.[0]?.toUpperCase()}</div>
             <div style={styles.sInfo}>
               <div style={styles.sName}>{selected.nickname} · {selected.first_name} {selected.last_name}</div>
               <div style={styles.sMeta}>@{selected.username} · {selected.school}</div>
-              <div style={styles.sPts}>💰 แต้มปัจจุบัน: {selected.points}</div>
+              <div style={styles.sPts}>
+                {isSecret
+                  ? `🔒 แต้มลับปัจจุบัน: ${selected.secret_points || 0}`
+                  : `💰 แต้มปัจจุบัน: ${selected.points}`}
+              </div>
             </div>
-            <button style={styles.clearBtn} onClick={() => setSelected(null)}>✕</button>
+            <button style={styles.clearBtn} onClick={() => { setSelected(null); setIsSecret(false) }}>✕</button>
           </div>
 
-          {/* Points Input */}
           <div className="input-group">
             <label className="input-label">จำนวนแต้ม</label>
             <input
@@ -210,23 +224,23 @@ export default function TeacherAssignPoints() {
             />
           </div>
 
-          {/* Quick Points */}
           <div style={styles.quickPts}>
             {[1, 2, 3, 5, 10, 20, 50, 100].map(p => (
               <button key={p} style={styles.quickPtBtn} onClick={() => setPoints(String(p))}>+{p}</button>
             ))}
           </div>
 
-          {/* Reason */}
-          <div className="input-group">
-            <label className="input-label">เหตุผล (ถ้ามี)</label>
-            <input
-              className="input"
-              placeholder="เช่น ตอบคำถามได้ถูกต้อง"
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-            />
-          </div>
+          {!isSecret && (
+            <div className="input-group">
+              <label className="input-label">เหตุผล (ถ้ามี)</label>
+              <input
+                className="input"
+                placeholder="เช่น ตอบคำถามได้ถูกต้อง"
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+              />
+            </div>
+          )}
 
           <button
             className="btn btn-primary btn-full btn-lg"
@@ -236,7 +250,9 @@ export default function TeacherAssignPoints() {
           >
             {submitting
               ? <><span className="spinner" /> กำลังให้แต้ม...</>
-              : `⭐ ให้ ${points || '?'} แต้มแก่ ${selected.nickname}`
+              : isSecret
+                ? `🔒 ให้ ${points || '?'} แต้มลับแก่ ${selected.nickname}`
+                : `⭐ ให้ ${points || '?'} แต้มแก่ ${selected.nickname}`
             }
           </button>
         </div>
@@ -292,6 +308,11 @@ const styles = {
     textAlign: 'center', color: '#9898AD', fontSize: '0.85rem', padding: '20px 0',
   },
   assignWrap: { padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 16 },
+  secretBanner: {
+    background: '#1A1A2E', color: '#F5C842', borderRadius: 12,
+    padding: '12px 16px', fontSize: '0.82rem', fontWeight: 700,
+    textAlign: 'center', fontFamily: 'Noto Sans Thai, sans-serif',
+  },
   studentCard: {
     background: 'white', borderRadius: 14, padding: '14px 16px',
     display: 'flex', alignItems: 'center', gap: 12,
