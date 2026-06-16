@@ -18,10 +18,6 @@ export default function TeacherTournaments() {
   const [editTarget, setEditTarget] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
-  const [selected, setSelected] = useState(null)
-  const [members, setMembers] = useState([])
-  const [hof, setHof] = useState(['', '', ''])
-  const [savingHof, setSavingHof] = useState(false)
 
   useEffect(() => { fetchTournaments() }, [])
 
@@ -47,15 +43,6 @@ export default function TeacherTournaments() {
     ;(data || []).forEach(m => { c[m.tournament_id] = (c[m.tournament_id] || 0) + 1 })
     ids.forEach(id => { if (!c[id]) c[id] = 0 })
     setCounts(c)
-  }
-
-  async function fetchMembers(tournamentId) {
-    const { data } = await supabase
-      .from('tournament_members')
-      .select('*, student:student_id(nickname, avatar_color, first_name, last_name)')
-      .eq('tournament_id', tournamentId)
-      .order('joined_at', { ascending: false })
-    setMembers(data || [])
   }
 
   function openCreate() {
@@ -118,29 +105,8 @@ export default function TeacherTournaments() {
   async function handleDelete(id) {
     if (!window.confirm('ลบ Tournament นี้?')) return
     await supabase.from('tournaments').delete().eq('id', id)
-    setSelected(null)
     showToast('ลบแล้ว', 'info')
     fetchTournaments()
-  }
-
-  async function openView(t) {
-    setSelected(t)
-    const arr = Array.isArray(t.hall_of_fame) ? t.hall_of_fame : []
-    setHof([arr[0] || '', arr[1] || '', arr[2] || ''])
-    await fetchMembers(t.id)
-  }
-
-  async function saveHof() {
-    setSavingHof(true)
-    try {
-      const cleaned = hof.map(h => h.trim()).filter(Boolean)
-      const { error } = await supabase.from('tournaments')
-        .update({ hall_of_fame: cleaned }).eq('id', selected.id)
-      if (error) throw error
-      showToast('บันทึก Hall of Fame แล้ว 🏆', 'success')
-      fetchTournaments()
-    } catch { showToast('เกิดข้อผิดพลาด', 'error') }
-    finally { setSavingHof(false) }
   }
 
   return (
@@ -183,7 +149,7 @@ export default function TeacherTournaments() {
                 <button className="btn btn-sm" style={styles.toggleBtn} onClick={() => toggleActive(t)}>
                   {t.is_active ? 'ปิด' : 'เปิด'}
                 </button>
-                <button className="btn btn-sm btn-secondary" onClick={() => openView(t)}>ดู</button>
+                <button className="btn btn-sm btn-primary" onClick={() => navigate(`/teacher/tournaments/${t.id}`)}>จัดการ</button>
               </div>
             </div>
           )
@@ -236,70 +202,6 @@ export default function TeacherTournaments() {
                 {saving ? <><span className="spinner" /> กำลังบันทึก...</> : editTarget ? '💾 บันทึก' : '✨ สร้าง'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* View / Members / Hall of Fame Modal */}
-      {selected && (
-        <div className="modal-overlay" onClick={() => setSelected(null)}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '88dvh', overflowY: 'auto' }}>
-            <div className="modal-handle" />
-            <div style={styles.detailHeader}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h2 style={styles.modalTitle}>{selected.title}</h2>
-                <div style={styles.codeDisplay}>
-                  💰 {selected.entry_cost} แต้ม
-                  · 👥 {members.length}{selected.max_participants !== -1 ? ` / ${selected.max_participants}` : ''} คน
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button className="btn btn-secondary btn-sm" onClick={() => { setSelected(null); openEdit(selected) }}>✏️</button>
-                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(selected.id)}>ลบ</button>
-              </div>
-            </div>
-
-            {/* Hall of Fame editor */}
-            <div style={styles.hofBox}>
-              <div style={styles.hofTitle}>🏆 Hall of Fame (3 อันดับ)</div>
-              {[0, 1, 2].map(i => (
-                <div key={i} style={styles.hofRow}>
-                  <span style={styles.hofMedal}>{['🥇', '🥈', '🥉'][i]}</span>
-                  <input className="input" placeholder={`อันดับ ${i + 1}`}
-                    value={hof[i]}
-                    onChange={e => setHof(h => { const n = [...h]; n[i] = e.target.value; return n })}
-                    style={{ flex: 1 }} />
-                </div>
-              ))}
-              <button className="btn btn-primary btn-full" onClick={saveHof} disabled={savingHof} style={{ marginTop: 8 }}>
-                {savingHof ? <><span className="spinner" /> กำลังบันทึก...</> : '💾 บันทึก Hall of Fame'}
-              </button>
-            </div>
-
-            <div style={styles.compHeader}>ผู้สมัคร ({members.length} คน)</div>
-            {members.length === 0 ? (
-              <div className="empty-state">
-                <span className="emoji">⏳</span>
-                <p>ยังไม่มีผู้สมัคร</p>
-              </div>
-            ) : (
-              <div style={styles.compList}>
-                {members.map((m, i) => (
-                  <div key={m.id} style={styles.compItem}>
-                    <span style={styles.compRank}>#{i + 1}</span>
-                    <div style={styles.sAvatar(m.student?.avatar_color)}>
-                      {m.student?.nickname?.[0]?.toUpperCase()}
-                    </div>
-                    <div style={styles.compInfo}>
-                      <div style={styles.compName}>{m.student?.nickname}</div>
-                      <div style={styles.compTime}>
-                        {m.student?.first_name} {m.student?.last_name} · {new Date(m.joined_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}

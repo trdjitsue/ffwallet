@@ -16,6 +16,8 @@ export default function StudentTournament() {
   const [selected, setSelected] = useState(null)
   const [joining, setJoining] = useState(false)
   const [celebrate, setCelebrate] = useState(false)
+  const [myScores, setMyScores] = useState([])
+  const [scoresLoading, setScoresLoading] = useState(false)
 
   useEffect(() => { fetchData() }, [])
 
@@ -37,6 +39,34 @@ export default function StudentTournament() {
     ;(data || []).forEach(m => { c[m.tournament_id] = (c[m.tournament_id] || 0) + 1 })
     ids.forEach(id => { if (!c[id]) c[id] = 0 })
     setCounts(c)
+  }
+
+  async function openTournament(t) {
+    setSelected(t)
+    setMyScores([])
+    if (myJoins.includes(t.id)) {
+      setScoresLoading(true)
+      const { data: exams } = await supabase
+        .from('tournament_exams')
+        .select('*')
+        .eq('tournament_id', t.id)
+        .order('created_at', { ascending: true })
+      if (exams && exams.length) {
+        const { data: scoreRows } = await supabase
+          .from('tournament_scores')
+          .select('exam_id, score')
+          .eq('student_id', profile.id)
+          .in('exam_id', exams.map(e => e.id))
+        const scoreMap = {}
+        ;(scoreRows || []).forEach(s => { scoreMap[s.exam_id] = s.score })
+        setMyScores(exams.map(e => ({
+          title: e.title,
+          max_score: e.max_score,
+          score: scoreMap[e.id],
+        })))
+      }
+      setScoresLoading(false)
+    }
   }
 
   async function handleJoin() {
@@ -111,8 +141,6 @@ export default function StudentTournament() {
         <div style={styles.pointsChip}>💰 {profile?.points || 0}</div>
       </div>
 
-
-
       <div style={styles.content}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.6)' }}>กำลังโหลด...</div>
@@ -128,7 +156,7 @@ export default function StudentTournament() {
           const isFull = t.max_participants !== -1 && cnt >= t.max_participants
           const pct = t.max_participants !== -1 ? Math.min((cnt / t.max_participants) * 100, 100) : 0
           return (
-            <button key={t.id} style={{ ...styles.card, animationDelay: `${idx * 0.08}s` }} onClick={() => setSelected(t)}>
+            <button key={t.id} style={{ ...styles.card, animationDelay: `${idx * 0.08}s` }} onClick={() => openTournament(t)}>
               <div style={styles.cardShine} />
               <div style={styles.cardMedal}>
                 <div style={styles.cardMedalGlow} />
@@ -183,6 +211,29 @@ export default function StudentTournament() {
                 <span style={{ ...styles.infoVal, color: profile?.points >= selected.entry_cost ? '#00A36C' : '#FF6B6B' }}>{profile?.points} แต้ม</span>
               </div>
             </div>
+
+            {/* My Scores - shown only if joined */}
+            {myJoins.includes(selected.id) && (
+              <div style={styles.scoreBox}>
+                <div style={styles.scoreBoxTitle}>📊 คะแนนของฉัน</div>
+                {scoresLoading ? (
+                  <div style={{ textAlign: 'center', padding: 16, color: '#9898AD', fontSize: '0.82rem' }}>กำลังโหลด...</div>
+                ) : myScores.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 16, color: '#9898AD', fontSize: '0.82rem' }}>ยังไม่มีชุดข้อสอบ</div>
+                ) : (
+                  myScores.map((s, i) => (
+                    <div key={i} style={styles.scoreItem}>
+                      <span style={styles.scoreItemTitle}>{s.title}</span>
+                      {s.score !== undefined && s.score !== null ? (
+                        <span style={styles.scoreItemVal}>{s.score} <span style={styles.scoreItemMax}>/ {s.max_score}</span></span>
+                      ) : (
+                        <span style={styles.scoreItemPending}>รอคะแนน</span>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
 
             {Array.isArray(selected.hall_of_fame) && selected.hall_of_fame.length > 0 && (
               <div style={styles.hofBox}>
@@ -296,19 +347,6 @@ const styles = {
     fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0,
     border: '1px solid rgba(255,255,255,0.25)',
   },
-  hero: {
-    position: 'relative', zIndex: 10,
-    display: 'flex', flexDirection: 'column', alignItems: 'center',
-    padding: '12px 20px 20px', textAlign: 'center',
-  },
-  heroGlow: {
-    position: 'absolute', top: 0, width: 160, height: 160, borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(245,200,66,0.4) 0%, transparent 65%)',
-    animation: 'tglowPulse 3s ease-in-out infinite', pointerEvents: 'none',
-  },
-  heroTrophy: { fontSize: '4.5rem', animation: 'theroFloat 3.5s ease-in-out infinite', filter: 'drop-shadow(0 8px 24px rgba(245,200,66,0.5))', zIndex: 2 },
-  heroTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '1.6rem', color: 'white', marginTop: 8, textShadow: '0 2px 16px rgba(0,0,0,0.3)', zIndex: 2 },
-  heroSub: { fontSize: '0.85rem', color: 'rgba(255,255,255,0.65)', marginTop: 4, zIndex: 2 },
   content: { padding: '4px 16px', display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', zIndex: 10 },
   emptyWrap: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', gap: 12 },
   emptyTrophy: { fontSize: '5rem', animation: 'theroFloat 3s ease infinite', filter: 'drop-shadow(0 0 32px rgba(245,200,66,0.6))' },
@@ -366,6 +404,16 @@ const styles = {
   infoRow: { display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F4F4F6' },
   infoLabel: { fontSize: '0.88rem', color: '#6E6E88' },
   infoVal: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#1A1A2E' },
+  scoreBox: {
+    background: 'linear-gradient(135deg, #EDF7FF 0%, #E0F0FF 100%)',
+    borderRadius: 14, padding: '14px', border: '1.5px solid #7DD8F5', marginTop: 16,
+  },
+  scoreBoxTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: '#0d6ea0', marginBottom: 10 },
+  scoreItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid rgba(125,216,245,0.3)' },
+  scoreItemTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 600, fontSize: '0.88rem', color: '#1A1A2E' },
+  scoreItemVal: { fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '1.05rem', color: '#0d6ea0' },
+  scoreItemMax: { fontWeight: 600, fontSize: '0.8rem', color: '#9898AD' },
+  scoreItemPending: { fontSize: '0.78rem', color: '#9898AD', fontStyle: 'italic' },
   hofBox: {
     position: 'relative', overflow: 'hidden',
     background: 'linear-gradient(135deg, #FFF9E0 0%, #FFF3C4 100%)',
