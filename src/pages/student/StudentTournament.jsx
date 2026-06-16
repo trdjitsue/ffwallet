@@ -50,6 +50,7 @@ export default function StudentTournament() {
         .from('tournament_exams')
         .select('*')
         .eq('tournament_id', t.id)
+        .eq('published', true)
         .order('created_at', { ascending: true })
       if (exams && exams.length) {
         const { data: scoreRows } = await supabase

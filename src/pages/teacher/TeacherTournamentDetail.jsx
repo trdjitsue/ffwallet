@@ -118,6 +118,15 @@ export default function TeacherTournamentDetail() {
     navigate('/teacher/tournaments')
   }
 
+  async function togglePublish(exam) {
+    const next = !exam.published
+    const { error } = await supabase.from('tournament_exams')
+      .update({ published: next }).eq('id', exam.id)
+    if (error) { showToast('เกิดข้อผิดพลาด', 'error'); return }
+    setExams(prev => prev.map(e => e.id === exam.id ? { ...e, published: next } : e))
+    showToast(next ? 'เผยแพร่คะแนนแล้ว นักเรียนเห็นแล้ว 🌐' : 'ยกเลิกเผยแพร่แล้ว', next ? 'success' : 'info')
+  }
+
   async function saveScore(examId, studentId, value) {
     const score = parseFloat(value)
     if (isNaN(score)) return
@@ -185,11 +194,18 @@ export default function TeacherTournamentDetail() {
                     <div style={styles.examMeta}>
                       <span style={styles.maxChip}>เต็ม {exam.max_score}</span>
                       <span style={styles.scoredChip}>กรอกแล้ว {scoredCount}/{members.length} คน</span>
+                      <span style={{ ...styles.pubChip, background: exam.published ? '#D0FFF4' : '#FFF0E0', color: exam.published ? '#007A5A' : '#B26A00' }}>
+                        {exam.published ? '🌐 เผยแพร่แล้ว' : '🔒 ร่าง (เด็กยังไม่เห็น)'}
+                      </span>
                     </div>
                   </div>
                   <div style={styles.examActions}>
                     <button className="btn btn-primary btn-sm" onClick={() => { setActiveExam(exam); setSearchName(''); setScoreInput({}) }}>
                       กรอกคะแนน
+                    </button>
+                    <button className="btn btn-sm" style={exam.published ? styles.unpubBtn : styles.pubBtn}
+                      onClick={() => togglePublish(exam)}>
+                      {exam.published ? 'ยกเลิกเผยแพร่' : '🌐 เผยแพร่'}
                     </button>
                     <button style={styles.delExamBtn} onClick={() => handleDeleteExam(exam.id)}>🗑️</button>
                   </div>
@@ -358,8 +374,11 @@ const styles = {
   examMeta: { display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' },
   maxChip: { fontSize: '0.72rem', fontWeight: 700, background: '#FFF9E0', color: '#8a6500', borderRadius: 8, padding: '2px 8px' },
   scoredChip: { fontSize: '0.72rem', fontWeight: 700, background: '#EDE5FF', color: '#6C3AF7', borderRadius: 8, padding: '2px 8px' },
-  examActions: { display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 },
-  delExamBtn: { width: 34, height: 34, borderRadius: 8, background: '#FFE5E5', border: 'none', cursor: 'pointer', fontSize: '0.9rem' },
+  pubChip: { fontSize: '0.7rem', fontWeight: 700, borderRadius: 8, padding: '2px 8px' },
+  pubBtn: { background: '#00D9A3', border: 'none', color: 'white', fontFamily: 'Sora, sans-serif', fontWeight: 700 },
+  unpubBtn: { background: '#F4F4F6', border: 'none', color: '#6E6E88', fontFamily: 'Sora, sans-serif', fontWeight: 600 },
+  examActions: { display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, flexShrink: 0 },
+  delExamBtn: { width: '100%', height: 34, borderRadius: 8, background: '#FFE5E5', border: 'none', cursor: 'pointer', fontSize: '0.9rem' },
   modalTitle: { fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: '1.2rem', color: '#1A1A2E' },
   codeDisplay: { fontSize: '0.8rem', color: '#9898AD', marginTop: 4 },
   scoreList: { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 },
