@@ -49,8 +49,14 @@ export default function StudentSecret() {
   }, [unlocked, profile?.id])
 
   async function refreshSecretPoints() {
-    const { data } = await supabase.from('profiles').select('secret_points').eq('id', profile.id).single()
-    if (data) setSecretPoints(data.secret_points || 0)
+    const { data, error } = await supabase.rpc('get_secret_points', { target_id: profile.id })
+    if (!error && data !== null && data !== undefined) {
+      setSecretPoints(data)
+    } else {
+      // fallback to direct select
+      const { data: row } = await supabase.from('profiles').select('secret_points').eq('id', profile.id).single()
+      if (row) setSecretPoints(row.secret_points || 0)
+    }
   }
 
   function handleUnlock() {

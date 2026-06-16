@@ -100,7 +100,12 @@ export default function TeacherAssignPoints() {
           amount: pts,
         })
         if (error) throw error
-        showToast(`✅ ให้ ${pts} แต้มลับแก่ ${selected.nickname} สำเร็จ! (รวม ${newTotal})`, 'success')
+        if (newTotal === null || newTotal === undefined) {
+          showToast('ไม่พบนักเรียนใน DB (id ไม่ตรง)', 'error')
+          setSubmitting(false)
+          return
+        }
+        showToast(`✅ ให้ ${pts} แต้มลับ! ตอนนี้รวม ${newTotal} แต้ม`, 'success')
       } else {
         const { error } = await supabase.from('point_transactions').insert({
           student_id: selected.id,
@@ -118,8 +123,8 @@ export default function TeacherAssignPoints() {
       setReason('')
       setSearch('')
       setStudents([])
-    } catch {
-      showToast('เกิดข้อผิดพลาด', 'error')
+    } catch (err) {
+      showToast('ผิดพลาด: ' + (err?.message || 'unknown'), 'error')
     } finally {
       setSubmitting(false)
     }
