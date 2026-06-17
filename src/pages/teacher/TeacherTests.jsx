@@ -22,6 +22,7 @@ export default function TeacherTests() {
   const [uploading, setUploading] = useState(false)
   const [selected, setSelected] = useState(null)
   const [completions, setCompletions] = useState([])
+  const [failed, setFailed] = useState([])
   const fileInputRef = useRef(null)
 
   useEffect(() => { fetchTests() }, [])
@@ -38,12 +39,21 @@ export default function TeacherTests() {
   }
 
   async function fetchCompletions(testId) {
-    const { data } = await supabase
-      .from('test_completions')
-      .select('*, student:student_id(nickname, avatar_color, first_name, last_name)')
-      .eq('test_id', testId)
-      .order('completed_at', { ascending: false })
-    setCompletions(data || [])
+    const [compRes, failRes] = await Promise.all([
+      supabase
+        .from('test_completions')
+        .select('*, student:student_id(nickname, avatar_color, first_name, last_name)')
+        .eq('test_id', testId)
+        .order('completed_at', { ascending: false }),
+      supabase
+        .from('test_attempts')
+        .select('*, student:student_id(nickname, avatar_color, first_name, last_name)')
+        .eq('test_id', testId)
+        .eq('success', false)
+        .order('created_at', { ascending: false }),
+    ])
+    setCompletions(compRes.data || [])
+    setFailed(failRes.data || [])
   }
 
   function openCreate() {
@@ -259,7 +269,7 @@ export default function TeacherTests() {
       {/* View Completions Modal */}
       {selected && (
         <div className="modal-overlay" onClick={() => setSelected(null)}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '85dvh' }}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '85dvh', overflowY: 'auto' }}>
             <div className="modal-handle" />
             <div style={styles.testDetailHeader}>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -276,12 +286,10 @@ export default function TeacherTests() {
               </div>
             </div>
 
-            <div style={styles.compHeader}>ผู้ที่เสร็จแล้ว ({completions.length} คน{selected.max_participants > 0 ? ` / ${selected.max_participants}` : ''})</div>
+            {/* Correct */}
+            <div style={styles.compHeader}>✅ ตอบถูก ({completions.length} คน{selected.max_participants > 0 ? ` / ${selected.max_participants}` : ''})</div>
             {completions.length === 0 ? (
-              <div className="empty-state">
-                <span className="emoji">⏳</span>
-                <p>ยังไม่มีนักเรียนทำเสร็จ</p>
-              </div>
+              <div style={styles.emptyMini}>ยังไม่มีนักเรียนทำเสร็จ</div>
             ) : (
               <div style={styles.compList}>
                 {completions.map((c, i) => (
@@ -297,6 +305,32 @@ export default function TeacherTests() {
                       </div>
                     </div>
                     <div style={styles.compPts}>+{c.points_earned}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Wrong */}
+            <div style={{ ...styles.compHeader, color: '#C53030', marginTop: 20 }}>❌ ตอบผิด ({failed.length} คน)</div>
+            {failed.length === 0 ? (
+              <div style={styles.emptyMini}>ยังไม่มีคนตอบผิด</div>
+            ) : (
+              <div style={styles.compList}>
+                {failed.map((f, i) => (
+                  <div key={f.id} style={styles.compItem}>
+                    <span style={styles.compRank}>#{i + 1}</span>
+                    <div style={styles.sAvatar(f.student?.avatar_color)}>
+                      {f.student?.nickname?.[0]?.toUpperCase()}
+                    </div>
+                    <div style={styles.compInfo}>
+                      <div style={styles.compName}>{f.student?.nickname}</div>
+                      <div style={styles.compTime}>
+                        {f.student?.first_name} {f.student?.last_name}
+                      </div>
+                    </div>
+                    <div style={styles.wrongAnswer}>
+                      ตอบ: <strong>{f.answer_text || '—'}</strong>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -399,7 +433,8 @@ const styles = {
   testDetailHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 12 },
   codeDisplay: { fontSize: '0.8rem', color: '#9898AD', marginTop: 4 },
   compHeader: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.88rem', color: '#6E6E88', marginBottom: 10 },
-  compList: { display: 'flex', flexDirection: 'column', gap: 2, maxHeight: '50dvh', overflowY: 'auto' },
+  emptyMini: { textAlign: 'center', color: '#9898AD', fontSize: '0.82rem', padding: '12px 0' },
+  compList: { display: 'flex', flexDirection: 'column', gap: 2 },
   compItem: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid #F4F4F6' },
   compRank: { fontFamily: 'Space Mono', fontSize: '0.75rem', color: '#9898AD', width: 24, flexShrink: 0 },
   sAvatar: (color) => ({
@@ -407,8 +442,13 @@ const styles = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: '0.85rem', fontWeight: 800, color: 'white', flexShrink: 0, fontFamily: 'Sora, sans-serif',
   }),
-  compInfo: { flex: 1 },
+  compInfo: { flex: 1, minWidth: 0 },
   compName: { fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: '0.88rem', color: '#1A1A2E' },
   compTime: { fontSize: '0.7rem', color: '#9898AD' },
   compPts: { fontFamily: 'Space Mono', fontWeight: 700, fontSize: '0.9rem', color: '#00D9A3', flexShrink: 0 },
+  wrongAnswer: {
+    fontSize: '0.78rem', color: '#C53030', flexShrink: 0,
+    background: '#FFE5E5', borderRadius: 8, padding: '4px 10px',
+    fontFamily: 'Space Mono, monospace',
+  },
 }

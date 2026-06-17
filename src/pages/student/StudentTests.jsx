@@ -108,6 +108,7 @@ export default function StudentTests() {
         test_id: activeTest.id,
         student_id: profile.id,
         success: false,
+        answer_text: joinCode.trim(),
       }, { onConflict: 'test_id,student_id' })
       setFailedAttempts(prev => [...prev, activeTest.id])
       setActiveTest(null)
