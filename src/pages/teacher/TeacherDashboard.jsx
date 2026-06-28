@@ -73,6 +73,7 @@ export default function TeacherDashboard() {
           <QuickAction href="/teacher/tests" icon="📝" label="กิจกรรม" sub="สร้าง & จัดการ" color="#00D9A3" />
           <QuickAction href="/teacher/ranking" icon="🏆" label="อันดับ" sub="ดูคะแนนทุกคน" color="#F5C842" />
           <QuickAction href="/teacher/tournaments" icon="🏆" label="Tournament" sub="สร้าง & จัดการ" color="#FF6B6B" />
+          <QuickAction href="/teacher/students" icon="🗑️" label="ลบไอดีเด็ก" sub="ค้นหา & ลบ" color="#E74C4C" />
         </div>
       </div>
 
@@ -91,20 +92,23 @@ export default function TeacherDashboard() {
           </div>
         ) : (
           <div style={styles.txList}>
-            {recentTx.map(tx => (
-              <div key={tx.id} style={styles.txItem}>
-                <div style={styles.txAvatar(tx.student?.avatar_color || '#6C3AF7')}>
-                  {tx.student?.nickname?.[0]?.toUpperCase() || '?'}
+            {recentTx.map(tx => {
+              const isDeduct = tx.transaction_type === 'spend'
+              return (
+                <div key={tx.id} style={styles.txItem}>
+                  <div style={styles.txAvatar(tx.student?.avatar_color || '#6C3AF7')}>
+                    {tx.student?.nickname?.[0]?.toUpperCase() || '?'}
+                  </div>
+                  <div style={styles.txInfo}>
+                    <div style={styles.txName}>{tx.student?.nickname}</div>
+                    <div style={styles.txReason}>{tx.reason || 'ให้แต้ม'}</div>
+                  </div>
+                  <div style={{ ...styles.txPts, color: isDeduct ? '#FF6B6B' : '#00D9A3' }}>
+                    {isDeduct ? '-' : '+'}{Math.abs(tx.points)}
+                  </div>
                 </div>
-                <div style={styles.txInfo}>
-                  <div style={styles.txName}>{tx.student?.nickname}</div>
-                  <div style={styles.txReason}>{tx.reason || 'ให้แต้ม'}</div>
-                </div>
-                <div style={{ ...styles.txPts, color: tx.points > 0 ? '#00D9A3' : '#FF6B6B' }}>
-                  +{tx.points}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

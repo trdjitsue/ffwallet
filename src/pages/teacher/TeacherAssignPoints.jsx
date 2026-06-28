@@ -15,6 +15,7 @@ export default function TeacherAssignPoints() {
   const [isSecret, setIsSecret] = useState(false)
   const [points, setPoints] = useState('')
   const [reason, setReason] = useState('')
+  const [deductMode, setDeductMode] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const scannerRef = useRef(null)
   const html5QrRef = useRef(null)
@@ -105,8 +106,22 @@ export default function TeacherAssignPoints() {
           setSubmitting(false)
           return
         }
-        showToast(`✅ ให้ ${pts} แต้มลับแก่ ${selected.nickname} สำเร็จ!`, 'success')
         showToast(`✅ ให้ ${pts} แต้มลับ! ตอนนี้รวม ${newTotal} แต้ม`, 'success')
+      } else if (deductMode) {
+        if ((selected.points || 0) < pts) {
+          showToast(`แต้มไม่พอ (มี ${selected.points || 0} แต้ม)`, 'error')
+          setSubmitting(false)
+          return
+        }
+        const { error } = await supabase.from('point_transactions').insert({
+          student_id: selected.id,
+          teacher_id: profile.id,
+          points: pts,
+          transaction_type: 'spend',
+          reason: reason.trim() || 'ครูหักแต้ม',
+        })
+        if (error) throw error
+        showToast(`➖ หัก ${pts} แต้มจาก ${selected.nickname} สำเร็จ!`, 'success')
       } else {
         const { error } = await supabase.from('point_transactions').insert({
           student_id: selected.id,
@@ -120,6 +135,7 @@ export default function TeacherAssignPoints() {
       }
       setSelected(null)
       setIsSecret(false)
+      setDeductMode(false)
       setPoints('')
       setReason('')
       setSearch('')
@@ -215,8 +231,23 @@ export default function TeacherAssignPoints() {
                   : `💰 แต้มปัจจุบัน: ${selected.points}`}
               </div>
             </div>
-            <button style={styles.clearBtn} onClick={() => { setSelected(null); setIsSecret(false) }}>✕</button>
+            <button style={styles.clearBtn} onClick={() => { setSelected(null); setIsSecret(false); setDeductMode(false) }}>✕</button>
           </div>
+
+          {!isSecret && (
+            <div style={styles.modeToggle}>
+              <button
+                style={{ ...styles.modeBtn, ...(!deductMode ? styles.modeBtnGive : {}) }}
+                onClick={() => setDeductMode(false)}>
+                ⭐ ให้แต้ม
+              </button>
+              <button
+                style={{ ...styles.modeBtn, ...(deductMode ? styles.modeBtnDeduct : {}) }}
+                onClick={() => setDeductMode(true)}>
+                ➖ หักแต้ม
+              </button>
+            </div>
+          )}
 
           <div className="input-group">
             <label className="input-label">จำนวนแต้ม</label>
@@ -233,7 +264,7 @@ export default function TeacherAssignPoints() {
 
           <div style={styles.quickPts}>
             {[1, 2, 3, 5, 10, 20, 50, 100].map(p => (
-              <button key={p} style={styles.quickPtBtn} onClick={() => setPoints(String(p))}>+{p}</button>
+              <button key={p} style={styles.quickPtBtn} onClick={() => setPoints(String(p))}>{deductMode && !isSecret ? '' : '+'}{p}</button>
             ))}
           </div>
 
@@ -242,7 +273,7 @@ export default function TeacherAssignPoints() {
               <label className="input-label">เหตุผล (ถ้ามี)</label>
               <input
                 className="input"
-                placeholder="เช่น ตอบคำถามได้ถูกต้อง"
+                placeholder={deductMode ? 'เช่น ทำผิดกติกา' : 'เช่น ตอบคำถามได้ถูกต้อง'}
                 value={reason}
                 onChange={e => setReason(e.target.value)}
               />
@@ -250,16 +281,18 @@ export default function TeacherAssignPoints() {
           )}
 
           <button
-            className="btn btn-primary btn-full btn-lg"
+            className="btn btn-full btn-lg"
             onClick={handleAssign}
             disabled={submitting || !points}
-            style={{ marginTop: 8 }}
+            style={{ marginTop: 8, ...(deductMode && !isSecret ? styles.deductSubmitBtn : styles.giveSubmitBtn) }}
           >
             {submitting
-              ? <><span className="spinner" /> กำลังให้แต้ม...</>
+              ? <><span className="spinner" /> กำลังบันทึก...</>
               : isSecret
                 ? `🔒 ให้ ${points || '?'} แต้มลับแก่ ${selected.nickname}`
-                : `⭐ ให้ ${points || '?'} แต้มแก่ ${selected.nickname}`
+                : deductMode
+                  ? `➖ หัก ${points || '?'} แต้มจาก ${selected.nickname}`
+                  : `⭐ ให้ ${points || '?'} แต้มแก่ ${selected.nickname}`
             }
           </button>
         </div>
@@ -315,8 +348,19 @@ const styles = {
     textAlign: 'center', color: '#9898AD', fontSize: '0.85rem', padding: '20px 0',
   },
   assignWrap: { padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 16 },
-  secretBanner: {
-    background: '#1A1A2E', color: '#F5C842', borderRadius: 12,
+  modeToggle: {
+    display: 'flex', gap: 8, background: '#EFEAFB', borderRadius: 14, padding: 4,
+  },
+  modeBtn: {
+    flex: 1, padding: '10px', border: 'none', background: 'transparent',
+    borderRadius: 10, fontFamily: 'Sora, sans-serif', fontWeight: 700,
+    fontSize: '0.9rem', color: '#6E6E88', cursor: 'pointer', transition: 'all 0.15s',
+  },
+  modeBtnGive: { background: 'white', color: '#6C3AF7', boxShadow: '0 2px 8px rgba(108,58,247,0.18)' },
+  modeBtnDeduct: { background: '#FF6B6B', color: 'white', boxShadow: '0 2px 8px rgba(255,107,107,0.3)' },
+  giveSubmitBtn: { background: 'linear-gradient(135deg, #6C3AF7, #4519C9)', color: 'white' },
+  deductSubmitBtn: { background: 'linear-gradient(135deg, #FF6B6B, #E74C4C)', color: 'white' },
+  secretBanner: {    background: '#1A1A2E', color: '#F5C842', borderRadius: 12,
     padding: '12px 16px', fontSize: '0.82rem', fontWeight: 700,
     textAlign: 'center', fontFamily: 'Noto Sans Thai, sans-serif',
   },
@@ -348,8 +392,7 @@ const styles = {
   },
   quickPts: {
     display: 'flex', flexWrap: 'wrap', gap: 8,
-  },
-  quickPtBtn: {
+  },  quickPtBtn: {
     padding: '8px 14px', borderRadius: 20,
     background: '#EDE5FF', border: '2px solid #D8C9FF',
     color: '#6C3AF7', fontFamily: 'Sora, sans-serif', fontWeight: 700,
